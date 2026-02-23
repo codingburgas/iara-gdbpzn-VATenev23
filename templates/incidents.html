@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<h2>Active Incidents</h2>
+
+<a href="/report_incident" class="btn btn-danger mb-3">Report New Incident</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Location</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Reported</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for incident in incidents %}
+        <tr>
+            <td>{{ incident.title }}</td>
+            <td>{{ incident.location }}</td>
+            <td>{{ incident.type }}</td>
+            <td>{{ incident.status }}</td>
+            <td>{{ incident.reported_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

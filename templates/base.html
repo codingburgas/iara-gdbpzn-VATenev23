@@ -3,11 +3,12 @@
 {% block navbar %}
 <nav class="navbar navbar-dark bg-dark">
   <div class="container">
-    <a class="navbar-brand" href="/">MyApp</a>
+    <a class="navbar-brand" href="/">Fire Department System</a>
 
     <div>
+      <a href="/incidents" class="btn btn-outline-light btn-sm">Incidents</a>
       <a href="/login" class="btn btn-outline-light btn-sm">Login</a>
-      <a href="/register" class="btn btn-light btn-sm">Register</a>
+      <a href="{{ url_for('register') }}" class="btn btn-light btn-sm">Register</a>
     </div>
   </div>
 </nav>

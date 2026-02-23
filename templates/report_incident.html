@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<h2>Report New Incident</h2>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+        {{ form.title.label(class="form-label") }}
+        {{ form.title(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.location.label(class="form-label") }}
+        {{ form.location(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.incident_type.label(class="form-label") }}
+        {{ form.incident_type(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.description.label(class="form-label") }}
+        {{ form.description(class="form-control") }}
+    </div>
+
+    {{ form.submit(class="btn btn-danger") }}
+    <a href="/incidents" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
