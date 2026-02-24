@@ -1,0 +1,86 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Personnel & Resources</h2>
+    <a href="{{ url_for('staff_import_data') }}" class="btn btn-primary">Import Data</a>
+</div>
+<hr>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#firefighters">Firefighters</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#vehicles">Vehicles</a>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="firefighters">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Rank</th>
+                    <th>Status</th>
+                    <th>Vehicle</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in firefighters %}
+                <tr>
+                    <td>{{ f.name }}</td>
+                    <td>{{ f.rank }}</td>
+                    <td>
+                        <span class="badge
+                            {% if f.status == 'available' %}bg-success
+                            {% elif f.status == 'on_duty' %}bg-primary
+                            {% elif f.status == 'vacation' %}bg-warning
+                            {% else %}bg-secondary{% endif %}">
+                            {{ f.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if f.assigned_vehicle %}
+                            {{ f.assigned_vehicle.type }}
+                        {% else %}
+                            <span class="text-muted">Unassigned</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tab-pane fade" id="vehicles">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Crew</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vehicles %}
+                <tr>
+                    <td>{{ v.type }}</td>
+                    <td>{{ v.location }}</td>
+                    <td>
+                        {% if v.firefighters %}
+                            {% for f in v.firefighters %}
+                                <span class="badge bg-info">{{ f.name }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">No crew</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

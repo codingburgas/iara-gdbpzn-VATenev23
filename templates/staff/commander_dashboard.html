@@ -1,0 +1,75 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Commander Dashboard</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-dark">
+            <div class="card-body">
+                <h6>Total Incidents</h6>
+                <h3>{{ stats.total_incidents }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>Active Incidents</h6>
+                <h3>{{ stats.active_incidents }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6>Available Firefighters</h6>
+                <h3>{{ stats.available_firefighters }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6>Total Vehicles</h6>
+                <h3>{{ stats.total_vehicles }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5>Command Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('staff_incidents') }}" class="btn btn-primary w-100 mb-2">View All Incidents</a>
+                <a href="{{ url_for('staff_firefighters') }}" class="btn btn-primary w-100 mb-2">Manage Personnel</a>
+                <a href="#" class="btn btn-warning w-100 mb-2">Generate Reports</a>
+                <a href="#" class="btn btn-danger w-100">Emergency Alert All Units</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5>System Status</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Total Users:</strong> {{ stats.total_users }}</p>
+                <p><strong>Response Time Average:</strong> 4:32 minutes</p>
+                <p><strong>Units in Field:</strong> 3</p>
+                <p><strong>Last Incident:</strong> 10 minutes ago</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

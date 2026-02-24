@@ -1,0 +1,70 @@
+{% extends "public/base.html" %}
+
+{% block title %}Non-Emergency Report - Burgas Fire Department{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>Non-Emergency Report</h1>
+        <p class="lead">For non-urgent issues that need fire department attention</p>
+        <div class="alert alert-warning">
+            <strong>⚠️ IMPORTANT:</strong> If this is an emergency, call <strong>112</strong> immediately. Do not use this form for emergencies.
+        </div>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5>Report an Issue</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/non-emergency">
+                    <div class="mb-3">
+                        <label class="form-label">Your Name (Optional)</label>
+                        <input type="text" class="form-control" name="name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Your Contact Info (Optional)</label>
+                        <input type="text" class="form-control" name="contact" placeholder="Email or phone">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Type of Issue</label>
+                        <select class="form-select" name="issue_type" required>
+                            <option value="">Select...</option>
+                            <option value="smoke">Smoke smell in area</option>
+                            <option value="hydrant">Damaged fire hydrant</option>
+                            <option value="blocked">Blocked fire lane</option>
+                            <option value="alarm">False alarm (business/residential)</option>
+                            <option value="safety">Safety concern</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Location</label>
+                        <input type="text" class="form-control" name="location" placeholder="Exact address or intersection" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="5" placeholder="Please describe the issue in detail" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" required>
+                        <label class="form-check-label">I confirm this is NOT an emergency</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-danger">Submit Report</button>
+                    <a href="/" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

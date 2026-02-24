@@ -1,0 +1,95 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Dispatcher Dashboard</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Active Incidents</h5>
+                <p class="display-4">{{ active_incidents }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Available Units</h5>
+                <p class="display-4">{{ available_vehicles }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Firefighters</h5>
+                <p class="display-4">{{ total_firefighters }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Response Time</h5>
+                <p class="display-4">4:32</p>
+                <small>avg. minutes</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5>Recent Incidents</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for incident in recent_incidents %}
+                        <tr>
+                            <td>#{{ incident.id }}</td>
+                            <td>{{ incident.incident_type }}</td>
+                            <td>{{ incident.location[:30] }}...</td>
+                            <td>
+                                <span class="badge bg-primary">{{ incident.status }}</span>
+                            </td>
+                            <td>{{ incident.reported_at.strftime('%H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('staff_report_incident') }}" class="btn btn-danger w-100 mb-2">+ New Incident</a>
+                <a href="{{ url_for('staff_incidents') }}" class="btn btn-outline-primary w-100 mb-2">View All Incidents</a>
+                <a href="{{ url_for('staff_firefighters') }}" class="btn btn-outline-primary w-100">Manage Resources</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

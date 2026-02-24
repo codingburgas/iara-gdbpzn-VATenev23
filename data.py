@@ -10,7 +10,49 @@ firefighters = [
         "id": 2,
         "name": "Georgi Ivanov",
         "rank": "Firefighter",
+        "status": "available",
+        "vehicle_id": 101
+    },
+    {
+        "id": 3,
+        "name": "Dimitar Georgiev",
+        "rank": "Firefighter",
+        "status": "available",
+        "vehicle_id": 101
+    },
+    {
+        "id": 4,
+        "name": "Nikolay Dimitrov",
+        "rank": "Driver",
+        "status": "available",
+        "vehicle_id": 102
+    },
+    {
+        "id": 5,
+        "name": "Petar Nikolov",
+        "rank": "Firefighter",
+        "status": "on_duty",
+        "vehicle_id": 102
+    },
+    {
+        "id": 6,
+        "name": "Hristo Hristov",
+        "rank": "Firefighter",
         "status": "vacation",
+        "vehicle_id": None
+    },
+    {
+        "id": 7,
+        "name": "Todor Todorov",
+        "rank": "Commander",
+        "status": "available",
+        "vehicle_id": 103
+    },
+    {
+        "id": 8,
+        "name": "Stoyan Stoyanov",
+        "rank": "Firefighter",
+        "status": "sick",
         "vehicle_id": None
     }
 ]
@@ -18,9 +60,33 @@ firefighters = [
 vehicles = [
     {
         "id": 101,
-        "type": "Fire Truck",
+        "type": "Fire Truck - Aerial Ladder",
+        "location": "Burgas Central Station",
+        "team": [1, 2, 3]
+    },
+    {
+        "id": 102,
+        "type": "Fire Engine - Water Tanker",
+        "location": "Burgas Central Station",
+        "team": [4, 5]
+    },
+    {
+        "id": 103,
+        "type": "Command Vehicle",
+        "location": "Burgas Central Station",
+        "team": [7]
+    },
+    {
+        "id": 104,
+        "type": "Rescue Vehicle",
+        "location": "Burgas Station 2 - Industrial Zone",
+        "team": []
+    },
+    {
+        "id": 105,
+        "type": "Ambulance",
         "location": "Burgas Station 1",
-        "team": [1]
+        "team": []
     }
 ]
 

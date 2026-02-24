@@ -1,0 +1,66 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<h2>Report New Incident</h2>
+<hr>
+
+<div class="row">
+    <div class="col-md-6">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="mb-3">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-control") }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.location.label(class="form-label") }}
+                {{ form.location(class="form-control") }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.incident_type.label(class="form-label") }}
+                {{ form.incident_type(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.vehicle_id.label(class="form-label") }}
+                {{ form.vehicle_id(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-control", rows=4) }}
+            </div>
+
+            {{ form.submit(class="btn btn-danger") }}
+            <a href="{{ url_for('staff_incidents') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5>Available Units</h5>
+            </div>
+            <div class="card-body">
+                {% for vehicle in vehicles %}
+                <div class="border-bottom mb-2 pb-2">
+                    <strong>{{ vehicle.type }}</strong> - {{ vehicle.location }}<br>
+                    <small>Crew:
+                        {% if vehicle.firefighters %}
+                            {% for f in vehicle.firefighters %}
+                                {{ f.name }} ({{ f.rank }})
+                            {% endfor %}
+                        {% else %}
+                            No crew assigned
+                        {% endif %}
+                    </small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Firefighter Dashboard</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5>Your Status</h5>
+            </div>
+            <div class="card-body">
+                {% if firefighter %}
+                <p><strong>Name:</strong> {{ firefighter.name }}</p>
+                <p><strong>Rank:</strong> {{ firefighter.rank }}</p>
+                <p><strong>Status:</strong> 
+                    <span class="badge {% if firefighter.status == 'available' %}bg-success{% else %}bg-warning{% endif %}">
+                        {{ firefighter.status }}
+                    </span>
+                </p>
+                <p><strong>Vehicle:</strong> 
+                    {% if firefighter.assigned_vehicle %}
+                        {{ firefighter.assigned_vehicle.type }}
+                    {% else %}
+                        Not assigned
+                    {% endif %}
+                </p>
+                {% else %}
+                <p>Firefighter profile not found in system.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-success w-100 mb-2">✅ Available</button>
+                <button class="btn btn-warning w-100 mb-2">⏱️ On Break</button>
+                <button class="btn btn-danger w-100">🚨 Emergency SOS</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5>My Assigned Incidents</h5>
+            </div>
+            <div class="card-body">
+                {% if incidents %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for incident in incidents %}
+                        <tr>
+                            <td>#{{ incident.id }}</td>
+                            <td>{{ incident.incident_type }}</td>
+                            <td>{{ incident.location }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ incident.status }}</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-success">En Route</button>
+                                <button class="btn btn-sm btn-warning">On Scene</button>
+                                <button class="btn btn-sm btn-secondary">Complete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">No incidents assigned to you.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

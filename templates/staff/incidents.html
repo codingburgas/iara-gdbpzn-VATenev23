@@ -1,0 +1,58 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Incident Management</h2>
+    <a href="{{ url_for('staff_report_incident') }}" class="btn btn-danger">+ New Incident</a>
+</div>
+<hr>
+
+<table class="table table-striped table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Location</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Assigned Vehicle</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for incident in incidents %}
+        <tr>
+            <td>#{{ incident.id }}</td>
+            <td>{{ incident.title }}</td>
+            <td>{{ incident.location }}</td>
+            <td>
+                <span class="badge
+                    {% if incident.incident_type == 'fire' %}bg-danger
+                    {% elif incident.incident_type == 'rescue' %}bg-success
+                    {% elif incident.incident_type == 'accident' %}bg-warning
+                    {% else %}bg-secondary{% endif %}">
+                    {{ incident.incident_type }}
+                </span>
+            </td>
+            <td>
+                <span class="badge
+                    {% if incident.status == 'Reported' %}bg-primary
+                    {% elif incident.status == 'Dispatched' %}bg-info
+                    {% elif incident.status == 'On Scene' %}bg-warning
+                    {% elif incident.status == 'Closed' %}bg-secondary{% endif %}">
+                    {{ incident.status }}
+                </span>
+            </td>
+            <td>
+                {% if incident.assigned_vehicle %}
+                    {{ incident.assigned_vehicle.type }}
+                {% else %}
+                    <span class="text-muted">Unassigned</span>
+                {% endif %}
+            </td>
+            <td>{{ incident.reported_at.strftime('%H:%M %d/%m') }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
