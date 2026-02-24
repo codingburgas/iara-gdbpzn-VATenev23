@@ -9,24 +9,52 @@
     <div class="mb-3">
         {{ form.title.label(class="form-label") }}
         {{ form.title(class="form-control") }}
+        {% if form.title.errors %}
+            <div class="text-danger">
+                {% for error in form.title.errors %}
+                    <small>{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <div class="mb-3">
         {{ form.location.label(class="form-label") }}
         {{ form.location(class="form-control") }}
+        {% if form.location.errors %}
+            <div class="text-danger">
+                {% for error in form.location.errors %}
+                    <small>{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <div class="mb-3">
         {{ form.incident_type.label(class="form-label") }}
-        {{ form.incident_type(class="form-control") }}
+        {{ form.incident_type(class="form-select") }}
+        {% if form.incident_type.errors %}
+            <div class="text-danger">
+                {% for error in form.incident_type.errors %}
+                    <small>{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <div class="mb-3">
         {{ form.description.label(class="form-label") }}
-        {{ form.description(class="form-control") }}
+        {{ form.description(class="form-control", rows=4) }}
+        {% if form.description.errors %}
+            <div class="text-danger">
+                {% for error in form.description.errors %}
+                    <small>{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     {{ form.submit(class="btn btn-danger") }}
-    <a href="/incidents" class="btn btn-secondary">Cancel</a>
+    <a href="{{ url_for('incidents') }}" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}
