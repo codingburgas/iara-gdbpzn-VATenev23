@@ -12,53 +12,151 @@
             <div class="mb-3">
                 {{ form.title.label(class="form-label") }}
                 {{ form.title(class="form-control") }}
+                {% if form.title.errors %}
+                    <div class="text-danger">
+                        {% for error in form.title.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
 
             <div class="mb-3">
                 {{ form.location.label(class="form-label") }}
                 {{ form.location(class="form-control") }}
+                <small class="text-muted">Street address or intersection</small>
+                {% if form.location.errors %}
+                    <div class="text-danger">
+                        {% for error in form.location.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- NEW: Latitude and Longitude fields (optional) -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        {{ form.latitude.label(class="form-label") }}
+                        {{ form.latitude(class="form-control", placeholder="e.g., 42.5063") }}
+                        <small class="text-muted">Optional - for map display</small>
+                        {% if form.latitude.errors %}
+                            <div class="text-danger">
+                                {% for error in form.latitude.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        {{ form.longitude.label(class="form-label") }}
+                        {{ form.longitude(class="form-control", placeholder="e.g., 27.4678") }}
+                        <small class="text-muted">Optional - for map display</small>
+                        {% if form.longitude.errors %}
+                            <div class="text-danger">
+                                {% for error in form.longitude.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
 
             <div class="mb-3">
                 {{ form.incident_type.label(class="form-label") }}
                 {{ form.incident_type(class="form-select") }}
+                {% if form.incident_type.errors %}
+                    <div class="text-danger">
+                        {% for error in form.incident_type.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
 
             <div class="mb-3">
                 {{ form.vehicle_id.label(class="form-label") }}
                 {{ form.vehicle_id(class="form-select") }}
+                {% if form.vehicle_id.errors %}
+                    <div class="text-danger">
+                        {% for error in form.vehicle_id.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="text-muted">Select which vehicle to dispatch</small>
             </div>
 
             <div class="mb-3">
                 {{ form.description.label(class="form-label") }}
                 {{ form.description(class="form-control", rows=4) }}
+                {% if form.description.errors %}
+                    <div class="text-danger">
+                        {% for error in form.description.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
 
-            {{ form.submit(class="btn btn-danger") }}
-            <a href="{{ url_for('staff_incidents') }}" class="btn btn-secondary">Cancel</a>
+            <div class="mb-3">
+                {{ form.submit(class="btn btn-danger") }}
+                <a href="{{ url_for('staff_incidents') }}" class="btn btn-secondary">Cancel</a>
+            </div>
         </form>
     </div>
 
     <div class="col-md-6">
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header bg-dark text-white">
-                <h5>Available Units</h5>
+                <h5>📍 Available Units</h5>
             </div>
             <div class="card-body">
-                {% for vehicle in vehicles %}
-                <div class="border-bottom mb-2 pb-2">
-                    <strong>{{ vehicle.type }}</strong> - {{ vehicle.location }}<br>
-                    <small>Crew:
+                {% if vehicles %}
+                    {% for vehicle in vehicles %}
+                    <div class="border-bottom mb-3 pb-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ vehicle.type }}</strong>
+                            <span class="badge bg-info">ID: {{ vehicle.id }}</span>
+                        </div>
+                        <p class="mb-1"><small>📍 {{ vehicle.location }}</small></p>
+                        <p class="mb-1"><small><strong>Crew:</strong></small></p>
                         {% if vehicle.firefighters %}
-                            {% for f in vehicle.firefighters %}
-                                {{ f.name }} ({{ f.rank }})
-                            {% endfor %}
+                            <ul class="list-unstyled ms-2">
+                                {% for f in vehicle.firefighters %}
+                                    <li><small>• {{ f.name }} ({{ f.rank }})
+                                        <span class="badge {% if f.status == 'available' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ f.status }}
+                                        </span>
+                                    </small></li>
+                                {% endfor %}
+                            </ul>
                         {% else %}
-                            No crew assigned
+                            <p class="text-muted ms-2"><small>No crew assigned</small></p>
                         {% endif %}
-                    </small>
-                </div>
-                {% endfor %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No vehicles available. <a href="{{ url_for('staff_import_data') }}">Import data first</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick coordinates reference -->
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5>📍 Burgas Coordinates</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>City Center:</strong> 42.5063, 27.4678</p>
+                <p><strong>Central Station:</strong> 42.5132, 27.4628</p>
+                <p><strong>Industrial Zone:</strong> 42.4815, 27.4412</p>
+                <p><strong>Airport:</strong> 42.5697, 27.5152</p>
+                <p><small class="text-muted">You can use Google Maps to get coordinates for specific addresses.</small></p>
             </div>
         </div>
     </div>

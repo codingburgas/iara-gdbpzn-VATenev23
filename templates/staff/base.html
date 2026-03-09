@@ -43,17 +43,18 @@
 
     <div class="container-fluid mt-3">
         {% if session.logged_in and session.user_role in ['dispatcher', 'commander'] %}
-        <div class="row mb-3">
-            <div class="col">
-                <div class="btn-group">
-                    <a href="{{ url_for('dispatcher_dashboard') }}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
-                    <a href="{{ url_for('staff_incidents') }}" class="btn btn-outline-secondary btn-sm">Incidents</a>
-                    <a href="{{ url_for('staff_report_incident') }}" class="btn btn-danger btn-sm">+ New Incident</a>
-                    <a href="{{ url_for('staff_firefighters') }}" class="btn btn-outline-secondary btn-sm">Resources</a>
-                </div>
-            </div>
+<div class="row mb-3">
+    <div class="col">
+        <div class="btn-group">
+            <a href="{{ url_for('dispatcher_dashboard') }}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+            <a href="{{ url_for('staff_incidents') }}" class="btn btn-outline-secondary btn-sm">Incidents</a>
+            <a href="{{ url_for('incident_map') }}" class="btn btn-outline-secondary btn-sm">🗺️ Map</a>  <!-- NEW -->
+            <a href="{{ url_for('staff_report_incident') }}" class="btn btn-danger btn-sm">+ New Incident</a>
+            <a href="{{ url_for('staff_firefighters') }}" class="btn btn-outline-secondary btn-sm">Resources</a>
         </div>
-        {% endif %}
+    </div>
+</div>
+{% endif %}
 
         <div class="row">
             <div class="col">

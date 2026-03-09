@@ -2,10 +2,11 @@ from flask import Flask, render_template, redirect, url_for, flash, session, req
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField
-from wtforms.validators import DataRequired, Email, Length, EqualTo
+from wtforms.validators import DataRequired, Email, Length, Optional
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import requests
 import datetime
 
 app = Flask(__name__)
@@ -40,20 +41,6 @@ class Firefighter(db.Model):
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
 
 
-class Incident(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    location = db.Column(db.String(200), nullable=False)
-    incident_type = db.Column(db.String(50), nullable=False)
-    description = db.Column(db.Text)
-    status = db.Column(db.String(20), default='Reported')
-    reported_by = db.Column(db.Integer, db.ForeignKey('user_model.id'))
-    reported_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    assigned_vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
-    assigned_vehicle = db.relationship('Vehicle')
-    reporter = db.relationship('UserModel', backref='incidents')
-
-
 # ========== FORMS ==========
 class RegisterForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
@@ -73,10 +60,27 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Login")
 
+class Incident(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    location = db.Column(db.String(200), nullable=False)
+    incident_type = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.Text)
+    status = db.Column(db.String(20), default='Reported')
+    reported_by = db.Column(db.Integer, db.ForeignKey('user_model.id'))
+    reported_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    assigned_vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
+    assigned_vehicle = db.relationship('Vehicle')
+    reporter = db.relationship('UserModel', backref='incidents')
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+
 
 class IncidentForm(FlaskForm):
     title = StringField('Incident Title', validators=[DataRequired()])
     location = StringField('Location', validators=[DataRequired()])
+    latitude = StringField('Latitude', validators=[Optional()])  # Add this
+    longitude = StringField('Longitude', validators=[Optional()])  # Add this
     incident_type = SelectField('Incident Type',
                                 choices=[('fire', 'Fire'),
                                          ('rescue', 'Rescue'),
@@ -87,7 +91,6 @@ class IncidentForm(FlaskForm):
     description = TextAreaField('Description', validators=[DataRequired()])
     vehicle_id = SelectField('Assign Vehicle', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Report Incident')
-
 
 # ========== DECORATORS ==========
 def login_required(f):
@@ -117,6 +120,25 @@ def role_required(*roles):
 
     return decorator
 
+def geocode_address(address):
+    """Convert address to lat/lon using OpenStreetMap Nominatim"""
+    try:
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            'q': address,
+            'format': 'json',
+            'limit': 1
+        }
+        headers = {
+            'User-Agent': 'BurgasFireDepartment/1.0'
+        }
+        response = requests.get(url, params=params, headers=headers)
+        data = response.json()
+        if data:
+            return float(data[0]['lat']), float(data[0]['lon'])
+    except:
+        pass
+    return None, None
 
 # ========== PUBLIC WEBSITE ROUTES ==========
 @app.route('/')
@@ -224,6 +246,17 @@ def staff_register():
 def staff_dashboard():
     return render_template('staff/dashboard.html')
 
+@app.route('/staff/map')
+@login_required
+@role_required('dispatcher', 'commander', 'firefighter')
+def incident_map():
+    """Display interactive map with all incidents"""
+    incidents = Incident.query.filter(Incident.status != 'Closed').all()
+    vehicles = Vehicle.query.all()
+
+    return render_template('staff/map_view.html',
+                           incidents=incidents,
+                           vehicles=vehicles)
 
 @app.route('/dispatcher/dashboard')
 @login_required
@@ -295,9 +328,21 @@ def staff_report_incident():
             flash('Please import vehicles first!', 'danger')
             return redirect(url_for('staff_report_incident'))
 
+        # Parse coordinates if provided
+        lat = None
+        lon = None
+        if form.latitude.data and form.longitude.data:
+            try:
+                lat = float(form.latitude.data)
+                lon = float(form.longitude.data)
+            except:
+                flash('Invalid coordinates format. Using default.', 'warning')
+
         new_incident = Incident(
             title=form.title.data,
             location=form.location.data,
+            latitude=lat,
+            longitude=lon,
             incident_type=form.incident_type.data,
             description=form.description.data,
             reported_by=session.get('user_id'),
