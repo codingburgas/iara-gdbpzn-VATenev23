@@ -60,6 +60,7 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Login")
 
+
 class Incident(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
@@ -71,9 +72,18 @@ class Incident(db.Model):
     reported_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     assigned_vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
     assigned_vehicle = db.relationship('Vehicle')
-    reporter = db.relationship('UserModel', backref='incidents')
+
+    # FIX THESE RELATIONSHIPS
+    reporter = db.relationship('UserModel', foreign_keys=[reported_by], backref='reported_incidents')
+
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
+    dispatched_at = db.Column(db.DateTime, nullable=True)
+    on_scene_at = db.Column(db.DateTime, nullable=True)
+    closed_at = db.Column(db.DateTime, nullable=True)
+    last_updated = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=True)
+    updater = db.relationship('UserModel', foreign_keys=[updated_by], backref='updated_incidents')
 
 
 class IncidentForm(FlaskForm):
@@ -91,6 +101,44 @@ class IncidentForm(FlaskForm):
     description = TextAreaField('Description', validators=[DataRequired()])
     vehicle_id = SelectField('Assign Vehicle', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Report Incident')
+
+class StatusUpdateForm(FlaskForm):
+    new_status = SelectField('New Status',
+                            choices=[('Reported', '🚨 Reported'),
+                                    ('Dispatched', '🚒 Dispatched'),
+                                    ('On Scene', '🔥 On Scene'),
+                                    ('Contained', '📦 Contained'),
+                                    ('Closed', '✅ Closed')],
+                            validators=[DataRequired()])
+    comment = TextAreaField('Comment (optional)', validators=[Optional()])
+    submit = SubmitField('Update Status')
+
+class StatusUpdate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
+    old_status = db.Column(db.String(20), nullable=False)
+    new_status = db.Column(db.String(20), nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    # Relationships
+    incident = db.relationship('Incident', backref='status_updates')
+    user = db.relationship('UserModel', foreign_keys=[user_id])
+
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=True)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    # Relationships
+    user = db.relationship('UserModel', foreign_keys=[user_id])
+    incident = db.relationship('Incident', foreign_keys=[incident_id])
 
 # ========== DECORATORS ==========
 def login_required(f):
@@ -139,6 +187,18 @@ def geocode_address(address):
     except:
         pass
     return None, None
+
+def create_notification(user_id, title, message, incident_id=None):
+    """Create a notification for a user"""
+    notification = Notification(
+        user_id=user_id,
+        title=title,
+        message=message,
+        incident_id=incident_id
+    )
+    db.session.add(notification)
+    db.session.commit()
+    return notification
 
 # ========== PUBLIC WEBSITE ROUTES ==========
 @app.route('/')
@@ -257,6 +317,111 @@ def incident_map():
     return render_template('staff/map_view.html',
                            incidents=incidents,
                            vehicles=vehicles)
+
+
+@app.route('/staff/incident/<int:incident_id>', methods=['GET', 'POST'])
+@login_required
+def incident_detail(incident_id):
+    incident = Incident.query.get_or_404(incident_id)
+    form = StatusUpdateForm()
+
+    # Get status history
+    status_history = StatusUpdate.query.filter_by(incident_id=incident_id).order_by(StatusUpdate.timestamp.desc()).all()
+
+    if form.validate_on_submit():
+        # Check if status actually changed
+        if form.new_status.data != incident.status:
+            # Create status update record
+            update = StatusUpdate(
+                incident_id=incident.id,
+                user_id=session.get('user_id'),
+                old_status=incident.status,
+                new_status=form.new_status.data,
+                comment=form.comment.data
+            )
+            db.session.add(update)
+
+            # Update incident
+            old_status = incident.status
+            incident.status = form.new_status.data
+            incident.updated_by = session.get('user_id')
+
+            # Set timestamps based on status
+            now = datetime.datetime.utcnow()
+            if form.new_status.data == 'Dispatched' and not incident.dispatched_at:
+                incident.dispatched_at = now
+            elif form.new_status.data == 'On Scene' and not incident.on_scene_at:
+                incident.on_scene_at = now
+            elif form.new_status.data == 'Closed' and not incident.closed_at:
+                incident.closed_at = now
+
+            db.session.commit()
+
+            # Create notification for relevant users
+            create_notification(
+                user_id=incident.reported_by,
+                title=f'Incident #{incident.id} Status Updated',
+                message=f'Status changed from {old_status} to {form.new_status.data}',
+                incident_id=incident.id
+            )
+
+            if incident.assigned_vehicle:
+                for firefighter in incident.assigned_vehicle.firefighters:
+                    # Find user with this firefighter name
+                    user = UserModel.query.filter_by(username=firefighter.name).first()
+                    if user:
+                        create_notification(
+                            user_id=user.id,
+                            title=f'Incident #{incident.id} Update',
+                            message=f'Your assigned incident is now {form.new_status.data}',
+                            incident_id=incident.id
+                        )
+
+            flash(f'Incident status updated to {form.new_status.data}', 'success')
+            return redirect(url_for('incident_detail', incident_id=incident.id))
+        else:
+            flash('Status unchanged', 'info')
+
+    return render_template('staff/incident_detail.html',
+                           incident=incident,
+                           form=form,
+                           status_history=status_history)
+
+
+@app.route('/staff/notifications')
+@login_required
+def view_notifications():
+    notifications = Notification.query.filter_by(
+        user_id=session.get('user_id')
+    ).order_by(Notification.created_at.desc()).all()
+
+    # Mark all as read when viewed
+    for n in notifications:
+        n.is_read = True
+    db.session.commit()
+
+    return render_template('staff/notifications.html', notifications=notifications)
+
+
+@app.route('/staff/notifications/count')
+@login_required
+def notification_count():
+    count = Notification.query.filter_by(
+        user_id=session.get('user_id'),
+        is_read=False
+    ).count()
+    return {'count': count}
+
+
+@app.route('/staff/notifications/clear', methods=['POST'])
+@login_required
+def clear_notifications():
+    Notification.query.filter_by(
+        user_id=session.get('user_id'),
+        is_read=True
+    ).delete()
+    db.session.commit()
+    return redirect(url_for('view_notifications'))
 
 @app.route('/dispatcher/dashboard')
 @login_required

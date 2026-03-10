@@ -90,22 +90,22 @@
 
     // Add incident markers
     {% for incident in incidents %}
-        {% if incident.latitude and incident.longitude %}
-            L.marker([{{ incident.latitude }}, {{ incident.longitude }}], {
-                icon: getIcon('{{ incident.incident_type }}')
-            })
-            .addTo(map)
-            .bindPopup(`
-                <b>#{{ incident.id }} - {{ incident.title }}</b><br>
-                <span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">
-                    {{ incident.incident_type }}
-                </span><br>
-                <span class="badge bg-primary">{{ incident.status }}</span><br>
-                <small>{{ incident.location }}</small><br>
-                <a href="#" class="btn btn-sm btn-outline-primary mt-2" onclick="alert('Incident detail page coming soon!'); return false;">View Details</a>
-            `);
-        {% endif %}
-    {% endfor %}
+    {% if incident.latitude and incident.longitude %}
+        L.marker([{{ incident.latitude }}, {{ incident.longitude }}], {
+            icon: getIcon('{{ incident.incident_type }}')
+        })
+        .addTo(map)
+        .bindPopup(`
+            <b>#{{ incident.id }} - {{ incident.title }}</b><br>
+            <span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">
+                {{ incident.incident_type }}
+            </span><br>
+            <span class="badge bg-primary">{{ incident.status }}</span><br>
+            <small>{{ incident.location }}</small><br>
+            <a href="{{ url_for('incident_detail', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary mt-2">View Details</a>
+        `);
+    {% endif %}
+{% endfor %}
 
     // Add vehicle markers
     {% for vehicle in vehicles %}
