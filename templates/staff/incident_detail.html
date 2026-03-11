@@ -130,6 +130,14 @@
                 <a href="{{ url_for('incident_map') }}" class="btn btn-outline-primary w-100 mb-2">
                     🗺️ View on Map
                 </a>
+                <div class="btn-group w-100 mb-2" role="group">
+                    <a href="{{ url_for('incident_pdf', incident_id=incident.id) }}" class="btn btn-outline-danger">
+                         📥 Download PDF
+                    </a>
+                    <a href="{{ url_for('view_incident_pdf', incident_id=incident.id) }}" class="btn btn-outline-secondary" target="_blank">
+                        👁️ View PDF
+                    </a>
+                </div>
                 <button class="btn btn-outline-secondary w-100" onclick="alert('Coming soon!')">
                     📋 Generate Report
                 </button>

@@ -1,204 +1,26 @@
-from flask import Flask, render_template, redirect, url_for, flash, session, request
+from flask import Flask, render_template, redirect, url_for, flash, session, request, send_file
 from flask_bootstrap import Bootstrap
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField
-from wtforms.validators import DataRequired, Email, Length, Optional
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
-import requests
 import datetime
+
+from models import db, UserModel, Vehicle, Firefighter, Incident, StatusUpdate, Notification, Shift, Equipment, EquipmentAssignment
+from forms import (RegisterForm, LoginForm, IncidentForm, StatusUpdateForm,
+                   ShiftStartForm, ShiftEndForm, FirefighterStatusForm,
+                   EquipmentForm, EquipmentCheckoutForm, EquipmentReturnForm)
+from utils import login_required, role_required, duration_filter, geocode_address, create_notification, generate_incident_pdf
 
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 bootstrap = Bootstrap(app)
-db = SQLAlchemy(app)
+db.init_app(app)
 
+# Register template filters
+app.template_filter('duration')(duration_filter)
 
-# ========== MODELS ==========
-class UserModel(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(60), nullable=False)
-    role = db.Column(db.String(20), default='public')  # public, dispatcher, firefighter, commander
-
-
-class Vehicle(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(50))
-    location = db.Column(db.String(200))
-    firefighters = db.relationship('Firefighter', backref='assigned_vehicle', lazy=True)
-
-
-class Firefighter(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    rank = db.Column(db.String(50))
-    status = db.Column(db.String(20), default='available')
-    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
-
-
-# ========== FORMS ==========
-class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
-    email = StringField("Email", validators=[DataRequired(), Email()])
-    password = PasswordField("Password", validators=[DataRequired(), Length(min=6)])
-    role = SelectField('I am a...',
-                       choices=[('public', 'Civilian / Public'),
-                                ('firefighter', 'Firefighter'),
-                                ('dispatcher', 'Dispatcher'),
-                                ('commander', 'Commander')],
-                       validators=[DataRequired()])
-    submit = SubmitField("Register")
-
-
-class LoginForm(FlaskForm):
-    email = StringField("Email", validators=[DataRequired(), Email()])
-    password = PasswordField("Password", validators=[DataRequired()])
-    submit = SubmitField("Login")
-
-
-class Incident(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    location = db.Column(db.String(200), nullable=False)
-    incident_type = db.Column(db.String(50), nullable=False)
-    description = db.Column(db.Text)
-    status = db.Column(db.String(20), default='Reported')
-    reported_by = db.Column(db.Integer, db.ForeignKey('user_model.id'))
-    reported_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    assigned_vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
-    assigned_vehicle = db.relationship('Vehicle')
-
-    # FIX THESE RELATIONSHIPS
-    reporter = db.relationship('UserModel', foreign_keys=[reported_by], backref='reported_incidents')
-
-    latitude = db.Column(db.Float, nullable=True)
-    longitude = db.Column(db.Float, nullable=True)
-    dispatched_at = db.Column(db.DateTime, nullable=True)
-    on_scene_at = db.Column(db.DateTime, nullable=True)
-    closed_at = db.Column(db.DateTime, nullable=True)
-    last_updated = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    updated_by = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=True)
-    updater = db.relationship('UserModel', foreign_keys=[updated_by], backref='updated_incidents')
-
-
-class IncidentForm(FlaskForm):
-    title = StringField('Incident Title', validators=[DataRequired()])
-    location = StringField('Location', validators=[DataRequired()])
-    latitude = StringField('Latitude', validators=[Optional()])  # Add this
-    longitude = StringField('Longitude', validators=[Optional()])  # Add this
-    incident_type = SelectField('Incident Type',
-                                choices=[('fire', 'Fire'),
-                                         ('rescue', 'Rescue'),
-                                         ('accident', 'Car Accident'),
-                                         ('hazmat', 'Hazardous Materials'),
-                                         ('other', 'Other')],
-                                validators=[DataRequired()])
-    description = TextAreaField('Description', validators=[DataRequired()])
-    vehicle_id = SelectField('Assign Vehicle', coerce=int, validators=[DataRequired()])
-    submit = SubmitField('Report Incident')
-
-class StatusUpdateForm(FlaskForm):
-    new_status = SelectField('New Status',
-                            choices=[('Reported', '🚨 Reported'),
-                                    ('Dispatched', '🚒 Dispatched'),
-                                    ('On Scene', '🔥 On Scene'),
-                                    ('Contained', '📦 Contained'),
-                                    ('Closed', '✅ Closed')],
-                            validators=[DataRequired()])
-    comment = TextAreaField('Comment (optional)', validators=[Optional()])
-    submit = SubmitField('Update Status')
-
-class StatusUpdate(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
-    old_status = db.Column(db.String(20), nullable=False)
-    new_status = db.Column(db.String(20), nullable=False)
-    comment = db.Column(db.Text, nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    # Relationships
-    incident = db.relationship('Incident', backref='status_updates')
-    user = db.relationship('UserModel', foreign_keys=[user_id])
-
-
-class Notification(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
-    title = db.Column(db.String(100), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-    incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=True)
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    # Relationships
-    user = db.relationship('UserModel', foreign_keys=[user_id])
-    incident = db.relationship('Incident', foreign_keys=[incident_id])
-
-# ========== DECORATORS ==========
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('logged_in'):
-            flash('Please login to access the staff portal.', 'warning')
-            return redirect(url_for('staff_login'))
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
-def role_required(*roles):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not session.get('logged_in'):
-                flash('Please login to access the staff portal.', 'warning')
-                return redirect(url_for('staff_login'))
-            if session.get('user_role') not in roles:
-                flash('Unauthorized access. This incident has been logged.', 'danger')
-                return redirect(url_for('staff_dashboard'))
-            return f(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
-
-def geocode_address(address):
-    """Convert address to lat/lon using OpenStreetMap Nominatim"""
-    try:
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            'q': address,
-            'format': 'json',
-            'limit': 1
-        }
-        headers = {
-            'User-Agent': 'BurgasFireDepartment/1.0'
-        }
-        response = requests.get(url, params=params, headers=headers)
-        data = response.json()
-        if data:
-            return float(data[0]['lat']), float(data[0]['lon'])
-    except:
-        pass
-    return None, None
-
-def create_notification(user_id, title, message, incident_id=None):
-    """Create a notification for a user"""
-    notification = Notification(
-        user_id=user_id,
-        title=title,
-        message=message,
-        incident_id=incident_id
-    )
-    db.session.add(notification)
-    db.session.commit()
-    return notification
 
 # ========== PUBLIC WEBSITE ROUTES ==========
 @app.route('/')
@@ -306,6 +128,7 @@ def staff_register():
 def staff_dashboard():
     return render_template('staff/dashboard.html')
 
+
 @app.route('/staff/map')
 @login_required
 @role_required('dispatcher', 'commander', 'firefighter')
@@ -317,6 +140,167 @@ def incident_map():
     return render_template('staff/map_view.html',
                            incidents=incidents,
                            vehicles=vehicles)
+
+
+# ========== EQUIPMENT MANAGEMENT ROUTES ==========
+@app.route('/staff/equipment')
+@login_required
+@role_required('dispatcher', 'commander')
+def equipment_list():
+    """View all equipment"""
+    all_equipment = Equipment.query.all()
+    vehicles = Vehicle.query.all()
+    return render_template('staff/equipment_list.html',
+                           equipment=all_equipment,
+                           vehicles=vehicles)
+
+
+@app.route('/staff/equipment/add', methods=['GET', 'POST'])
+@login_required
+@role_required('commander')
+def add_equipment():
+    """Add new equipment"""
+    form = EquipmentForm()
+
+    # Populate vehicle choices
+    vehicles = Vehicle.query.all()
+    form.vehicle_id.choices = [(0, 'None - Not assigned')] + [(v.id, f"{v.type} - {v.location}") for v in vehicles]
+
+    if form.validate_on_submit():
+        equipment = Equipment(
+            name=form.name.data,
+            type=form.type.data,
+            model=form.model.data,
+            serial_number=form.serial_number.data,
+            status=form.status.data,
+            condition=form.condition.data,
+            vehicle_id=form.vehicle_id.data if form.vehicle_id.data != 0 else None,
+            notes=form.notes.data,
+            last_inspected=datetime.datetime.utcnow()
+        )
+
+        # Set next inspection date (default 6 months)
+        equipment.next_inspection = datetime.datetime.utcnow() + datetime.timedelta(days=180)
+
+        db.session.add(equipment)
+        db.session.commit()
+
+        flash(f'Equipment {equipment.name} added successfully!', 'success')
+        return redirect(url_for('equipment_list'))
+
+    return render_template('staff/equipment_form.html', form=form, title="Add Equipment")
+
+
+@app.route('/staff/equipment/<int:equipment_id>')
+@login_required
+@role_required('dispatcher', 'commander', 'firefighter')
+def equipment_detail(equipment_id):
+    """View equipment details"""
+    equipment = Equipment.query.get_or_404(equipment_id)
+    assignments = EquipmentAssignment.query.filter_by(equipment_id=equipment_id).order_by(
+        EquipmentAssignment.assigned_at.desc()).all()
+
+    return render_template('staff/equipment_detail.html',
+                           equipment=equipment,
+                           assignments=assignments)
+
+
+@app.route('/staff/equipment/<int:equipment_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('commander')
+def edit_equipment(equipment_id):
+    """Edit equipment details"""
+    equipment = Equipment.query.get_or_404(equipment_id)
+    form = EquipmentForm(obj=equipment)
+
+    vehicles = Vehicle.query.all()
+    form.vehicle_id.choices = [(0, 'None - Not assigned')] + [(v.id, f"{v.type} - {v.location}") for v in vehicles]
+
+    if form.validate_on_submit():
+        equipment.name = form.name.data
+        equipment.type = form.type.data
+        equipment.model = form.model.data
+        equipment.serial_number = form.serial_number.data
+        equipment.status = form.status.data
+        equipment.condition = form.condition.data
+        equipment.vehicle_id = form.vehicle_id.data if form.vehicle_id.data != 0 else None
+        equipment.notes = form.notes.data
+
+        db.session.commit()
+        flash('Equipment updated successfully!', 'success')
+        return redirect(url_for('equipment_detail', equipment_id=equipment.id))
+
+    return render_template('staff/equipment_form.html', form=form, equipment=equipment, title="Edit Equipment")
+
+
+@app.route('/staff/equipment/<int:equipment_id>/checkout', methods=['GET', 'POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def checkout_equipment(equipment_id):
+    """Check out equipment for an incident"""
+    equipment = Equipment.query.get_or_404(equipment_id)
+    form = EquipmentCheckoutForm()
+
+    # Populate choices
+    form.equipment_id.choices = [(equipment.id, equipment.name)]
+    form.incident_id.choices = [(0, 'None')] + [(i.id, f"#{i.id} - {i.title}") for i in
+                                                Incident.query.filter(Incident.status != 'Closed').all()]
+    form.firefighter_id.choices = [(0, 'None')] + [(f.id, f"{f.name} ({f.rank})") for f in Firefighter.query.all()]
+
+    if form.validate_on_submit():
+        assignment = EquipmentAssignment(
+            equipment_id=equipment.id,
+            incident_id=form.incident_id.data if form.incident_id.data != 0 else None,
+            firefighter_id=form.firefighter_id.data if form.firefighter_id.data != 0 else None,
+            notes=form.notes.data,
+            status='assigned'
+        )
+
+        equipment.status = 'in_use'
+
+        db.session.add(assignment)
+        db.session.commit()
+
+        # Create notification
+        if form.incident_id.data != 0:
+            incident = Incident.query.get(form.incident_id.data)
+            create_notification(
+                user_id=incident.reported_by,
+                title=f'Equipment Checked Out',
+                message=f'{equipment.name} checked out for incident #{incident.id}',
+                incident_id=incident.id
+            )
+
+        flash(f'{equipment.name} checked out successfully!', 'success')
+        return redirect(url_for('equipment_detail', equipment_id=equipment.id))
+
+    return render_template('staff/equipment_checkout.html', form=form, equipment=equipment)
+
+
+@app.route('/staff/equipment/<int:assignment_id>/return', methods=['GET', 'POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def return_equipment(assignment_id):
+    """Return checked out equipment"""
+    assignment = EquipmentAssignment.query.get_or_404(assignment_id)
+    equipment = assignment.equipment
+    form = EquipmentReturnForm()
+
+    if form.validate_on_submit():
+        assignment.returned_at = datetime.datetime.utcnow()
+        assignment.status = 'returned'
+        assignment.notes = (assignment.notes or '') + f"\nReturn notes: {form.notes.data}"
+
+        equipment.status = 'available'
+        equipment.condition = form.condition.data
+        equipment.last_inspected = datetime.datetime.utcnow()
+
+        db.session.commit()
+
+        flash(f'{equipment.name} returned successfully!', 'success')
+        return redirect(url_for('equipment_detail', equipment_id=equipment.id))
+
+    return render_template('staff/equipment_return.html', form=form, equipment=equipment, assignment=assignment)
 
 
 @app.route('/staff/incident/<int:incident_id>', methods=['GET', 'POST'])
@@ -423,12 +407,115 @@ def clear_notifications():
     db.session.commit()
     return redirect(url_for('view_notifications'))
 
+
+@app.route('/staff/shifts')
+@login_required
+@role_required('dispatcher', 'commander')
+def shift_management():
+    """View and manage shifts"""
+    active_shifts = Shift.query.filter_by(status='active').all()
+    today = datetime.datetime.now().date()
+    today_shifts = Shift.query.filter(
+        db.func.date(Shift.start_time) == today
+    ).order_by(Shift.start_time.desc()).all()
+
+    available_firefighters = Firefighter.query.filter_by(status='available').all()
+
+    return render_template('staff/shift_management.html',
+                           active_shifts=active_shifts,
+                           today_shifts=today_shifts,
+                           available_firefighters=available_firefighters,
+                           datetime=datetime)
+
+
+@app.route('/staff/shifts/start', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def start_shift():
+    """Start a shift for a firefighter"""
+    firefighter_id = request.form.get('firefighter_id')
+    firefighter = Firefighter.query.get(firefighter_id)
+
+    if not firefighter:
+        flash('Firefighter not found', 'danger')
+        return redirect(url_for('shift_management'))
+
+    # End any active shifts for this firefighter
+    active_shift = Shift.query.filter_by(
+        firefighter_id=firefighter_id,
+        status='active'
+    ).first()
+
+    if active_shift:
+        active_shift.status = 'completed'
+        active_shift.end_time = datetime.datetime.utcnow()
+
+    # Create new shift
+    new_shift = Shift(
+        firefighter_id=firefighter_id,
+        start_time=datetime.datetime.utcnow(),
+        status='active'
+    )
+    db.session.add(new_shift)
+
+    # Update firefighter
+    firefighter.status = 'on_duty'
+    firefighter.current_shift_id = new_shift.id
+    firefighter.last_active = datetime.datetime.utcnow()
+
+    db.session.commit()
+
+    flash(f'Shift started for {firefighter.name}', 'success')
+    return redirect(url_for('shift_management'))
+
+
+@app.route('/staff/shifts/end/<int:shift_id>', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def end_shift(shift_id):
+    """End a shift"""
+    shift = Shift.query.get_or_404(shift_id)
+
+    if shift.status != 'active':
+        flash('Shift is already ended', 'warning')
+        return redirect(url_for('shift_management'))
+
+    shift.status = 'completed'
+    shift.end_time = datetime.datetime.utcnow()
+
+    # Update firefighter
+    if shift.firefighter:
+        shift.firefighter.status = 'available'
+        shift.firefighter.current_shift_id = None
+
+    db.session.commit()
+
+    flash(f'Shift ended for {shift.firefighter.name}', 'success')
+    return redirect(url_for('shift_management'))
+
+
+@app.route('/staff/firefighter/<int:firefighter_id>/status', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def update_firefighter_status(firefighter_id):
+    """Update firefighter status"""
+    firefighter = Firefighter.query.get_or_404(firefighter_id)
+    new_status = request.form.get('status')
+
+    if new_status:
+        firefighter.status = new_status
+        db.session.commit()
+        flash(f'{firefighter.name} status updated to {new_status}', 'success')
+
+    return redirect(url_for('shift_management'))
+
+
 @app.route('/dispatcher/dashboard')
 @login_required
 @role_required('dispatcher', 'commander')
 def dispatcher_dashboard():
     active_incidents = Incident.query.filter(Incident.status != 'Closed').count()
-    available_vehicles = Vehicle.query.count()  # You'd add status later
+    available_vehicles = Vehicle.query.count()
     total_firefighters = Firefighter.query.count()
     recent_incidents = Incident.query.order_by(Incident.reported_at.desc()).limit(5).all()
 
@@ -576,6 +663,61 @@ def staff_import_data():
 
     return redirect(url_for('staff_firefighters'))
 
+
+#@app.route('/staff/import-equipment')
+#@login_required
+#@role_required('dispatcher', 'commander')
+#def import_equipment():
+    """Import default equipment"""
+    try:
+        from utils import create_default_equipment
+        create_default_equipment()
+        flash('Default equipment added successfully!', 'success')
+    except Exception as e:
+        flash(f'Error importing equipment: {str(e)}', 'danger')
+        print(f"Error: {e}")
+
+    return redirect(url_for('equipment_list'))
+
+@app.route('/staff/incident/<int:incident_id>/pdf')
+@login_required
+@role_required('dispatcher', 'commander', 'firefighter')
+def incident_pdf(incident_id):
+    """Generate PDF report for an incident"""
+    incident = Incident.query.get_or_404(incident_id)
+
+    try:
+        # Generate PDF
+        pdf_buffer = generate_incident_pdf(incident)
+
+        # Send file
+        return send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name=f"incident_{incident_id}_{datetime.datetime.now().strftime('%Y%m%d')}.pdf",
+            mimetype='application/pdf'
+        )
+    except Exception as e:
+        flash(f'Error generating PDF: {str(e)}', 'danger')
+        return redirect(url_for('incident_detail', incident_id=incident_id))
+
+
+@app.route('/staff/incident/<int:incident_id>/pdf/view')
+@login_required
+@role_required('dispatcher', 'commander', 'firefighter')
+def view_incident_pdf(incident_id):
+    """View PDF in browser instead of downloading"""
+    incident = Incident.query.get_or_404(incident_id)
+
+    try:
+        pdf_buffer = generate_incident_pdf(incident)
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf'
+        )
+    except Exception as e:
+        flash(f'Error generating PDF: {str(e)}', 'danger')
+        return redirect(url_for('incident_detail', incident_id=incident_id))
 
 @app.route('/staff/logout')
 def staff_logout():

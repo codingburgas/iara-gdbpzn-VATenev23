@@ -1,0 +1,191 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<h2>Shift Management</h2>
+<hr>
+
+<div class="row">
+    <!-- Start New Shift -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Start New Shift</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('start_shift') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Select Firefighter</label>
+                        <select name="firefighter_id" class="form-select" required>
+                            <option value="">Choose...</option>
+                            {% for f in available_firefighters %}
+                            <option value="{{ f.id }}">{{ f.name }} ({{ f.rank }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">▶️ Start Shift</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Status Update -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Update Status</h5>
+            </div>
+            <div class="card-body">
+                <select class="form-select mb-2" id="quick-firefighter">
+                    <option value="">Select Firefighter...</option>
+                    {% for f in today_shifts %}
+                        {% if f.firefighter %}
+                        <option value="{{ f.firefighter.id }}">{{ f.firefighter.name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <select class="form-select mb-2" id="quick-status">
+                    <option value="available">✅ Available</option>
+                    <option value="on_duty">🚒 On Duty</option>
+                    <option value="off_duty">💤 Off Duty</option>
+                    <option value="training">📚 Training</option>
+                    <option value="sick">🤒 Sick</option>
+                    <option value="vacation">🏖️ Vacation</option>
+                </select>
+                <button class="btn btn-primary w-100" onclick="updateStatus()">Update Status</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Shifts -->
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Active Shifts</h5>
+            </div>
+            <div class="card-body">
+                {% if active_shifts %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Firefighter</th>
+                                <th>Rank</th>
+                                <th>Started</th>
+                                <th>Duration</th>
+                                <th>Vehicle</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shift in active_shifts %}
+                            <tr>
+                                <td>{{ shift.firefighter.name }}</td>
+                                <td>{{ shift.firefighter.rank }}</td>
+                                <td>{{ shift.start_time.strftime('%H:%M') }}</td>
+                                <td>
+                                    {{ shift.start_time|duration }}
+                                </td>
+                                <td>
+                                    {% if shift.firefighter.assigned_vehicle %}
+                                        {{ shift.firefighter.assigned_vehicle.type }}
+                                    {% else %}
+                                        <span class="text-muted">None</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('end_shift', shift_id=shift.id) }}" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-warning">End Shift</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No active shifts</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Today's Shifts -->
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Today's Shifts</h5>
+            </div>
+            <div class="card-body">
+                {% if today_shifts %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Firefighter</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shift in today_shifts %}
+                            <tr>
+                                <td>{{ shift.firefighter.name }}</td>
+                                <td>{{ shift.start_time.strftime('%H:%M') }}</td>
+                                <td>
+                                    {% if shift.end_time %}
+                                        {{ shift.end_time.strftime('%H:%M') }}
+                                    {% else %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if shift.duration() %}
+                                        {{ shift.duration() }}h
+                                    {% else %}
+                                        <span class="badge bg-warning">In progress</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if shift.firefighter.status == 'available' %}success
+                                                           {% elif shift.firefighter.status == 'on_duty' %}primary
+                                                           {% else %}secondary{% endif %}">
+                                        {{ shift.firefighter.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No shifts today</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateStatus() {
+    var firefighterId = document.getElementById('quick-firefighter').value;
+    var status = document.getElementById('quick-status').value;
+    
+    if (!firefighterId) {
+        alert('Please select a firefighter');
+        return;
+    }
+    
+    // Create a form and submit it
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/staff/firefighter/' + firefighterId + '/status';
+    
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'status';
+    input.value = status;
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}
