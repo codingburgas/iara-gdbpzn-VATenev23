@@ -560,8 +560,60 @@ def commander_dashboard():
 @app.route('/staff/incidents')
 @login_required
 def staff_incidents():
-    all_incidents = Incident.query.order_by(Incident.reported_at.desc()).all()
-    return render_template('staff/incidents.html', incidents=all_incidents)
+    """View incidents with search and filtering"""
+    # Get filter parameters from request
+    search_query = request.args.get('search', '')
+    status_filter = request.args.get('status', '')
+    type_filter = request.args.get('type', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+
+    # Start with base query
+    query = Incident.query
+
+    # Apply search
+    if search_query:
+        query = query.filter(
+            db.or_(
+                Incident.title.ilike(f'%{search_query}%'),
+                Incident.location.ilike(f'%{search_query}%'),
+                Incident.description.ilike(f'%{search_query}%')
+            )
+        )
+
+    # Apply status filter
+    if status_filter:
+        query = query.filter(Incident.status == status_filter)
+
+    # Apply type filter
+    if type_filter:
+        query = query.filter(Incident.incident_type == type_filter)
+
+    # Apply date filters
+    if date_from:
+        date_from_obj = datetime.datetime.strptime(date_from, '%Y-%m-%d')
+        query = query.filter(Incident.reported_at >= date_from_obj)
+
+    if date_to:
+        date_to_obj = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
+        query = query.filter(Incident.reported_at <= date_to_obj)
+
+    # Get filtered incidents
+    all_incidents = query.order_by(Incident.reported_at.desc()).all()
+
+    # Get unique statuses and types for filter dropdowns
+    all_statuses = db.session.query(Incident.status).distinct().all()
+    all_types = db.session.query(Incident.incident_type).distinct().all()
+
+    return render_template('staff/incidents.html',
+                           incidents=all_incidents,
+                           all_statuses=[s[0] for s in all_statuses],
+                           all_types=[t[0] for t in all_types],
+                           search_query=search_query,
+                           status_filter=status_filter,
+                           type_filter=type_filter,
+                           date_from=date_from,
+                           date_to=date_to)
 
 
 @app.route('/staff/report_incident', methods=['GET', 'POST'])
@@ -616,11 +668,57 @@ def staff_report_incident():
 @login_required
 @role_required('dispatcher', 'commander')
 def staff_firefighters():
-    all_firefighters = Firefighter.query.all()
-    all_vehicles = Vehicle.query.all()
+    """View firefighters and vehicles with search"""
+    # Get filter parameters
+    search_query = request.args.get('search', '')
+    status_filter = request.args.get('status', '')
+    vehicle_filter = request.args.get('vehicle', '')
+
+    # Firefighters query with filters
+    ff_query = Firefighter.query
+
+    if search_query:
+        ff_query = ff_query.filter(
+            db.or_(
+                Firefighter.name.ilike(f'%{search_query}%'),
+                Firefighter.rank.ilike(f'%{search_query}%')
+            )
+        )
+
+    if status_filter:
+        ff_query = ff_query.filter(Firefighter.status == status_filter)
+
+    if vehicle_filter:
+        if vehicle_filter == 'unassigned':
+            ff_query = ff_query.filter(Firefighter.vehicle_id.is_(None))
+        else:
+            ff_query = ff_query.filter(Firefighter.vehicle_id == vehicle_filter)
+
+    all_firefighters = ff_query.all()
+
+    # Vehicles query with search
+    v_query = Vehicle.query
+
+    if search_query:
+        v_query = v_query.filter(
+            db.or_(
+                Vehicle.type.ilike(f'%{search_query}%'),
+                Vehicle.location.ilike(f'%{search_query}%')
+            )
+        )
+
+    all_vehicles = v_query.all()
+
+    # Get unique statuses for filter
+    all_statuses = ['available', 'on_duty', 'off_duty', 'training', 'sick', 'vacation']
+
     return render_template('staff/firefighters.html',
                            firefighters=all_firefighters,
-                           vehicles=all_vehicles)
+                           vehicles=all_vehicles,
+                           all_statuses=all_statuses,
+                           search_query=search_query,
+                           status_filter=status_filter,
+                           vehicle_filter=vehicle_filter)
 
 
 @app.route('/staff/import-data')
