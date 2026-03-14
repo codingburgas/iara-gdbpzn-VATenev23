@@ -95,13 +95,13 @@
                 </span>
             </td>
             <td>
-                <span class="badge
-                    {% if incident.status == 'Reported' %}bg-primary
-                    {% elif incident.status == 'Dispatched' %}bg-info
-                    {% elif incident.status == 'On Scene' %}bg-warning
-                    {% elif incident.status == 'Closed' %}bg-secondary{% endif %}">
-                    {{ incident.status }}
-                </span>
+                  <select class="form-select form-select-sm quick-status" data-incident="{{ incident.id }}" style="width: auto; min-width: 100px;">
+                    <option value="Reported" {% if incident.status == 'Reported' %}selected{% endif %}>🚨 Reported</option>
+                    <option value="Dispatched" {% if incident.status == 'Dispatched' %}selected{% endif %}>🚒 Dispatched</option>
+                    <option value="On Scene" {% if incident.status == 'On Scene' %}selected{% endif %}>🔥 On Scene</option>
+                  <option value="Contained" {% if incident.status == 'Contained' %}selected{% endif %}>📦 Contained</option>
+                    <option value="Closed" {% if incident.status == 'Closed' %}selected{% endif %}>✅ Closed</option>
+                 </select>
             </td>
             <td>
                 {% if incident.assigned_vehicle %}
@@ -118,4 +118,61 @@
         {% endfor %}
     </tbody>
 </table>
+    <script>
+// Quick status update with AJAX
+document.querySelectorAll('.quick-status').forEach(function(select) {
+    select.addEventListener('change', function() {
+        var incidentId = this.dataset.incident;
+        var newStatus = this.value;
+        var originalValue = this.getAttribute('data-original') || this.value;
+
+        // Show loading state
+        this.disabled = true;
+        this.style.opacity = '0.5';
+
+        // Send AJAX request
+        fetch('/staff/incident/' + incidentId + '/quick-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({status: newStatus})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message (optional)
+                this.style.borderColor = '#28a745';
+                this.setAttribute('data-original', newStatus);
+
+                // Update notification count
+                if (typeof updateNotificationCount === 'function') {
+                    updateNotificationCount();
+                }
+            } else {
+                // Revert on error
+                this.value = originalValue;
+                this.style.borderColor = '#dc3545';
+                alert('Error updating status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            this.value = originalValue;
+            this.style.borderColor = '#dc3545';
+            alert('Error updating status');
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.style.opacity = '1';
+            setTimeout(() => {
+                this.style.borderColor = '';
+            }, 2000);
+        });
+    });
+
+    // Store original value
+    select.setAttribute('data-original', select.value);
+});
+</script>
 {% endblock %}

@@ -8,6 +8,7 @@
     </div>
 </div>
 
+<!-- Stats Cards -->
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card text-white bg-dark">
@@ -43,33 +44,113 @@
     </div>
 </div>
 
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Incidents by Type</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="incidentTypeChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Incidents Last 6 Months</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header bg-dark text-white">
-                <h5>Command Actions</h5>
+                <h5 class="mb-0">Command Actions</h5>
             </div>
             <div class="card-body">
                 <a href="{{ url_for('staff_incidents') }}" class="btn btn-primary w-100 mb-2">View All Incidents</a>
                 <a href="{{ url_for('staff_firefighters') }}" class="btn btn-primary w-100 mb-2">Manage Personnel</a>
+                <a href="{{ url_for('export_incidents') }}" class="btn btn-success w-100 mb-2">📥 Export to CSV</a>
                 <a href="#" class="btn btn-warning w-100 mb-2">Generate Reports</a>
                 <a href="#" class="btn btn-danger w-100">Emergency Alert All Units</a>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-dark text-white">
-                <h5>System Status</h5>
-            </div>
-            <div class="card-body">
-                <p><strong>Total Users:</strong> {{ stats.total_users }}</p>
-                <p><strong>Response Time Average:</strong> 4:32 minutes</p>
-                <p><strong>Units in Field:</strong> 3</p>
-                <p><strong>Last Incident:</strong> 10 minutes ago</p>
-            </div>
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">System Status</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Total Users:</strong> {{ stats.total_users }}</p>
+            <p><strong>Response Time Average:</strong>
+                {% if avg_response_time %}
+                    {{ avg_response_time }}
+                {% else %}
+                    4:32 minutes
+                {% endif %}
+            </p>
+            <p><strong>Units in Field:</strong> {{ stats.units_in_field }}</p>
+            <p><strong>Last Incident:</strong> {{ stats.last_incident_time }}</p>
         </div>
     </div>
 </div>
+</div>
+
+<!-- Add Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Incident Type Chart
+    var ctx1 = document.getElementById('incidentTypeChart').getContext('2d');
+    var typeChart = new Chart(ctx1, {
+        type: 'pie',
+        data: {
+            labels: ['Fire', 'Rescue', 'Accident', 'Hazmat', 'Other'],
+            datasets: [{
+                data: [
+                    {{ stats.fire_count }},
+                    {{ stats.rescue_count }},
+                    {{ stats.accident_count }},
+                    {{ stats.hazmat_count }},
+                    {{ stats.other_count }}
+                ],
+                backgroundColor: ['#dc3545', '#28a745', '#ffc107', '#fd7e14', '#6c757d']
+            }]
+        }
+    });
+
+    // Monthly Incidents Chart
+    var ctx2 = document.getElementById('monthlyChart').getContext('2d');
+    var monthlyChart = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: {{ stats.months|tojson }},
+            datasets: [{
+                label: 'Incidents',
+                data: {{ stats.monthly_counts|tojson }},
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

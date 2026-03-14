@@ -13,6 +13,18 @@ class RegisterForm(FlaskForm):
                                 ('dispatcher', 'Dispatcher'),
                                 ('commander', 'Commander')],
                        validators=[DataRequired()])
+
+    # NEW: Firefighter specific fields (only shown if role is firefighter)
+    full_name = StringField('Full Name', validators=[Optional()])
+    rank = SelectField('Rank',
+                       choices=[('Firefighter', 'Firefighter'),
+                                ('Driver', 'Driver'),
+                                ('Commander', 'Commander'),
+                                ('Chief', 'Chief')],
+                       validators=[Optional()])
+    phone = StringField('Phone Number', validators=[Optional()])
+    employee_id = StringField('Employee ID', validators=[Optional()])
+
     submit = SubmitField("Register")
 
 

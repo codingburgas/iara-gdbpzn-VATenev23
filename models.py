@@ -53,12 +53,17 @@ class EquipmentAssignment(db.Model):
     incident = db.relationship('Incident', backref='equipment_assignments')
     firefighter = db.relationship('Firefighter', backref='equipment_assignments')
 
+
 class Firefighter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     rank = db.Column(db.String(50))
     status = db.Column(db.String(20), default='available')
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
+
+    # NEW: Link to User account
+    user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=True, unique=True)
+    user = db.relationship('UserModel', foreign_keys=[user_id], backref='firefighter_profile')
 
     # Shift management fields
     employee_id = db.Column(db.String(20), unique=True, nullable=True)

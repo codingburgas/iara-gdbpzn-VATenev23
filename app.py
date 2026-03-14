@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, session, request, send_file
+from flask import Flask, render_template, redirect, url_for, flash, session, request, send_file, Response
 from flask_bootstrap import Bootstrap
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
@@ -22,6 +22,25 @@ db.init_app(app)
 app.template_filter('duration')(duration_filter)
 
 
+def get_avg_response_time():
+    """Calculate average time from reported to dispatched"""
+    incidents = Incident.query.filter(Incident.dispatched_at.isnot(None)).all()
+    if not incidents:
+        return "N/A"
+
+    total = 0
+    count = 0
+    for i in incidents:
+        if i.dispatched_at and i.reported_at:
+            diff = i.dispatched_at - i.reported_at
+            total += diff.total_seconds() / 60  # minutes
+            count += 1
+
+    if count == 0:
+        return "N/A"
+
+    avg = total / count
+    return f"{avg:.1f} min"
 # ========== PUBLIC WEBSITE ROUTES ==========
 @app.route('/')
 def home():
@@ -99,15 +118,19 @@ def staff_login():
 
 
 @app.route('/staff/register', methods=['GET', 'POST'])
+@login_required
+@role_required('commander')  # Only commanders can register new staff
 def staff_register():
-    """Registration for staff (in real system, this would be admin-only)"""
+    """Registration for staff - now creates both User and Firefighter records"""
     form = RegisterForm()
+
     if form.validate_on_submit():
         existing_user = UserModel.query.filter_by(email=form.email.data).first()
         if existing_user:
             flash('Email already registered!', 'danger')
             return redirect(url_for('staff_register'))
 
+        # Create user account
         hashed_password = generate_password_hash(form.password.data)
         new_user = UserModel(
             username=form.username.data,
@@ -116,10 +139,27 @@ def staff_register():
             role=form.role.data
         )
         db.session.add(new_user)
+        db.session.flush()  # Get the user ID without committing yet
+
+        # If registering a firefighter, create firefighter record
+        if form.role.data == 'firefighter' and form.full_name.data:
+            firefighter = Firefighter(
+                name=form.full_name.data,
+                rank=form.rank.data or 'Firefighter',
+                status='available',
+                employee_id=form.employee_id.data,
+                phone=form.phone.data,
+                hire_date=datetime.datetime.utcnow(),
+                user_id=new_user.id  # Link to user account
+            )
+            db.session.add(firefighter)
+            flash(f'Firefighter {form.full_name.data} created and linked to account!', 'success')
+
         db.session.commit()
 
-        flash('Registration successful! You can now login.', 'success')
-        return redirect(url_for('staff_login'))
+        flash(f'Registration successful! {form.role.data.capitalize()} account created.', 'success')
+        return redirect(url_for('staff_firefighters'))
+
     return render_template('staff/register.html', form=form)
 
 
@@ -190,6 +230,21 @@ def add_equipment():
 
     return render_template('staff/equipment_form.html', form=form, title="Add Equipment")
 
+
+@app.route('/dashboard')
+@login_required
+def dynamic_dashboard():
+    """Redirect to the appropriate dashboard based on user role"""
+    user_role = session.get('user_role')
+
+    if user_role == 'dispatcher':
+        return redirect(url_for('dispatcher_dashboard'))
+    elif user_role == 'firefighter':
+        return redirect(url_for('firefighter_dashboard'))
+    elif user_role == 'commander':
+        return redirect(url_for('commander_dashboard'))
+    else:
+        return redirect(url_for('staff_dashboard'))
 
 @app.route('/staff/equipment/<int:equipment_id>')
 @login_required
@@ -510,6 +565,25 @@ def update_firefighter_status(firefighter_id):
     return redirect(url_for('shift_management'))
 
 
+@app.route('/staff/firefighter/<int:firefighter_id>/assign', methods=['GET', 'POST'])
+@login_required
+@role_required('commander', 'dispatcher')
+def assign_firefighter(firefighter_id):
+    """Assign a firefighter to a vehicle"""
+    firefighter = Firefighter.query.get_or_404(firefighter_id)
+    vehicles = Vehicle.query.all()
+
+    if request.method == 'POST':
+        vehicle_id = request.form.get('vehicle_id')
+        if vehicle_id:
+            firefighter.vehicle_id = vehicle_id
+            db.session.commit()
+            flash(f'{firefighter.name} assigned to vehicle successfully!', 'success')
+            return redirect(url_for('staff_firefighters'))
+
+    return render_template('staff/assign_firefighter.html',
+                           firefighter=firefighter,
+                           vehicles=vehicles)
 @app.route('/dispatcher/dashboard')
 @login_required
 @role_required('dispatcher', 'commander')
@@ -545,16 +619,56 @@ def firefighter_dashboard():
 @login_required
 @role_required('commander')
 def commander_dashboard():
+    # Get incident counts by type for charts
+    fire_count = Incident.query.filter_by(incident_type='fire').count()
+    rescue_count = Incident.query.filter_by(incident_type='rescue').count()
+    accident_count = Incident.query.filter_by(incident_type='accident').count()
+    hazmat_count = Incident.query.filter_by(incident_type='hazmat').count()
+    other_count = Incident.query.filter_by(incident_type='other').count()
+
+    # Get monthly incident data for the last 6 months
+    import calendar
+    from sqlalchemy import extract
+
+    months = []
+    monthly_counts = []
+
+    for i in range(5, -1, -1):
+        date = datetime.datetime.now() - datetime.timedelta(days=30 * i)
+        month_name = date.strftime('%b')
+        months.append(month_name)
+
+        count = Incident.query.filter(
+            extract('month', Incident.reported_at) == date.month,
+            extract('year', Incident.reported_at) == date.year
+        ).count()
+        monthly_counts.append(count)
+
+    # Calculate units in field
+    units_in_field = Incident.query.filter(Incident.status.in_(['Dispatched', 'On Scene'])).count()
+
+    # Get last incident
+    last_incident = Incident.query.order_by(Incident.reported_at.desc()).first()
+    last_incident_time = last_incident.reported_at.strftime('%H:%M %d/%m') if last_incident else 'No incidents'
+
     stats = {
         'total_incidents': Incident.query.count(),
         'active_incidents': Incident.query.filter(Incident.status != 'Closed').count(),
         'available_firefighters': Firefighter.query.filter_by(status='available').count(),
         'total_vehicles': Vehicle.query.count(),
-        'total_users': UserModel.query.count()
+        'total_users': UserModel.query.count(),
+        'fire_count': fire_count,
+        'rescue_count': rescue_count,
+        'accident_count': accident_count,
+        'hazmat_count': hazmat_count,
+        'other_count': other_count,
+        'months': months,
+        'monthly_counts': monthly_counts,
+        'units_in_field': units_in_field,  # ADD THIS
+        'last_incident_time': last_incident_time  # ADD THIS
     }
 
     return render_template('staff/commander_dashboard.html', stats=stats)
-
 
 # ========== STAFF OPERATIONAL ROUTES ==========
 @app.route('/staff/incidents')
@@ -616,6 +730,50 @@ def staff_incidents():
                            date_to=date_to)
 
 
+@app.route('/staff/incidents/export')
+@login_required
+@role_required('commander')
+def export_incidents():
+    """Export incidents to CSV"""
+    import csv
+    from io import StringIO
+    from flask import Response
+
+    # Create CSV in memory
+    si = StringIO()
+    cw = csv.writer(si)
+
+    # Write headers
+    cw.writerow(['ID', 'Title', 'Location', 'Type', 'Status',
+                 'Reported At', 'Reported By', 'Assigned Vehicle'])
+
+    # Get all incidents
+    incidents = Incident.query.order_by(Incident.reported_at.desc()).all()
+
+    # Write data rows
+    for i in incidents:
+        cw.writerow([
+            i.id,
+            i.title,
+            i.location,
+            i.incident_type,
+            i.status,
+            i.reported_at.strftime('%Y-%m-%d %H:%M'),
+            i.reporter.username if i.reporter else 'Unknown',
+            i.assigned_vehicle.type if i.assigned_vehicle else 'Unassigned'
+        ])
+
+    # Get the CSV string
+    output = si.getvalue()
+    si.close()
+
+    # Return as downloadable file
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=incidents_export.csv"}
+    )
+
 @app.route('/staff/report_incident', methods=['GET', 'POST'])
 @login_required
 @role_required('dispatcher', 'commander')
@@ -664,6 +822,51 @@ def staff_report_incident():
     return render_template('staff/report_incident.html', form=form, vehicles=vehicles)
 
 
+@app.route('/staff/incident/<int:incident_id>/quick-status', methods=['POST'])
+@login_required
+def quick_status_update(incident_id):
+    """Quick AJAX status update"""
+    incident = Incident.query.get_or_404(incident_id)
+    new_status = request.json.get('status')
+
+    if not new_status:
+        return {'error': 'No status provided'}, 400
+
+    # Create status update record
+    update = StatusUpdate(
+        incident_id=incident.id,
+        user_id=session.get('user_id'),
+        old_status=incident.status,
+        new_status=new_status,
+        comment='Quick update from list view'
+    )
+    db.session.add(update)
+
+    # Update incident
+    old_status = incident.status
+    incident.status = new_status
+    incident.updated_by = session.get('user_id')
+
+    # Set timestamps
+    now = datetime.datetime.utcnow()
+    if new_status == 'Dispatched' and not incident.dispatched_at:
+        incident.dispatched_at = now
+    elif new_status == 'On Scene' and not incident.on_scene_at:
+        incident.on_scene_at = now
+    elif new_status == 'Closed' and not incident.closed_at:
+        incident.closed_at = now
+
+    db.session.commit()
+
+    # Create notification
+    create_notification(
+        user_id=incident.reported_by,
+        title=f'Incident #{incident.id} Status Updated',
+        message=f'Status changed from {old_status} to {new_status}',
+        incident_id=incident.id
+    )
+
+    return {'success': True, 'new_status': new_status}
 @app.route('/staff/firefighters')
 @login_required
 @role_required('dispatcher', 'commander')
@@ -823,6 +1026,22 @@ def staff_logout():
     flash('You have been logged out successfully.', 'info')
     return redirect(url_for('staff_login'))
 
+
+@app.route('/create-first-commander')
+def create_first_commander():
+    existing = UserModel.query.filter_by(role='commander').first()
+    if existing:
+        return "Commander already exists!"
+
+    commander = UserModel(
+        username='commander',
+        email='c@fire.bg',
+        password=generate_password_hash('123456'),
+        role='commander'
+    )
+    db.session.add(commander)
+    db.session.commit()
+    return "Commander created! Email: c@fire.bg, Password: 123456"
 
 # ========== DATABASE INIT ==========
 with app.app_context():

@@ -74,6 +74,8 @@
                     <th>Rank</th>
                     <th>Status</th>
                     <th>Vehicle</th>
+                    <th>Account</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,6 +100,18 @@
                             <span class="text-muted">Unassigned</span>
                         {% endif %}
                     </td>
+                <td>
+                {% if f.user %}
+                    <span class="badge bg-success">✅ {{ f.user.username }}</span>
+                {% else %}
+                    <span class="badge bg-warning">⚠️ No account</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{{ url_for('assign_firefighter', firefighter_id=f.id) }}" class="btn btn-sm btn-outline-primary">
+                    Assign to Vehicle
+                </a>
+            </td>
                 </tr>
                 {% endfor %}
             </tbody>
