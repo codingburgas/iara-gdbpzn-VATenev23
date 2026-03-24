@@ -127,6 +127,9 @@
                 <h5 class="mb-0">Quick Actions</h5>
             </div>
             <div class="card-body">
+                <a href="{{ url_for('incident_chat', incident_id=incident.id) }}" class="btn btn-primary w-100 mb-2">
+                    💬 Open Communication Channel
+                </a>
                 <a href="{{ url_for('incident_map') }}" class="btn btn-outline-primary w-100 mb-2">
                     🗺️ View on Map
                 </a>
@@ -136,6 +139,9 @@
                     </a>
                     <a href="{{ url_for('view_incident_pdf', incident_id=incident.id) }}" class="btn btn-outline-secondary" target="_blank">
                         👁️ View PDF
+                    </a>
+                    <a href="{{ url_for('radio_log', incident_id=incident.id) }}" class="btn btn-outline-secondary w-100">
+                        📻 Radio Log
                     </a>
                 </div>
                 <button class="btn btn-outline-secondary w-100" onclick="alert('Coming soon!')">

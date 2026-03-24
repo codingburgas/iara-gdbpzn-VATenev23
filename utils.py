@@ -3,7 +3,7 @@ from flask import flash, redirect, url_for, session, send_file
 import requests
 import datetime
 import io
-from models import db, Notification, Equipment, EquipmentAssignment, Vehicle
+from models import db, Notification, Equipment, EquipmentAssignment, Vehicle, Message, MessageTemplate
 
 # ReportLab imports - FIXED with all needed constants
 from reportlab.lib import colors
@@ -385,3 +385,34 @@ def create_default_equipment():
 
     db.session.commit()
     print(f"Added {len(default_equipment)} equipment items")
+
+
+def create_default_templates():
+    """Create default message templates"""
+    if MessageTemplate.query.count() > 0:
+        return
+
+    templates = [
+        ('En Route', 'En route to incident. Estimated arrival in {{ eta }} minutes.', 'status'),
+        ('On Scene', 'Arrived on scene. Assessing situation.', 'status'),
+        ('Need Backup', 'Need backup at this location. Additional units requested.', 'request'),
+        ('Request Water Supply', 'Requesting additional water supply. Need water tender.', 'request'),
+        ('Situation Under Control', 'Situation is under control. Continuing operations.', 'status'),
+        ('All Clear', 'All clear. Returning to station.', 'status'),
+        ('🚨 MAYDAY', 'MAYDAY MAYDAY MAYDAY! Firefighter down! Need immediate assistance!', 'emergency'),
+        ('Hazmat Situation', 'Hazardous materials detected. Requesting hazmat team.', 'request'),
+        ('Medical Emergency', 'Medical emergency at scene. Requesting ambulance.', 'request'),
+        ('Command Update', 'Command update: Continuing operations. All units maintain position.', 'general'),
+    ]
+
+    for i, (name, message, category) in enumerate(templates):
+        template = MessageTemplate(
+            name=name,
+            message=message,
+            category=category,
+            order=i
+        )
+        db.session.add(template)
+
+    db.session.commit()
+    print("Default templates added!")

@@ -19,6 +19,18 @@ class Vehicle(db.Model):
     location = db.Column(db.String(200))
     firefighters = db.relationship('Firefighter', backref='assigned_vehicle', lazy=True)
 
+    # GPS Tracking fields
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    last_updated = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    speed = db.Column(db.Float, nullable=True)
+    heading = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.String(20), default='station')
+    current_incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=True)
+
+    # Relationship - FIXED with foreign_keys
+    current_incident = db.relationship('Incident', foreign_keys=[current_incident_id])
+
 class Equipment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -87,7 +99,6 @@ class Incident(db.Model):
     reported_by = db.Column(db.Integer, db.ForeignKey('user_model.id'))
     reported_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     assigned_vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
-    assigned_vehicle = db.relationship('Vehicle')
 
     # Map fields
     latitude = db.Column(db.Float, nullable=True)
@@ -99,11 +110,9 @@ class Incident(db.Model):
     closed_at = db.Column(db.DateTime, nullable=True)
     last_updated = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     updated_by = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=True)
-
-    # Relationships
+    assigned_vehicle = db.relationship('Vehicle', foreign_keys=[assigned_vehicle_id])
     reporter = db.relationship('UserModel', foreign_keys=[reported_by], backref='reported_incidents')
     updater = db.relationship('UserModel', foreign_keys=[updated_by], backref='updated_incidents')
-
 
 class StatusUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -149,3 +158,31 @@ class Shift(db.Model):
             delta = self.end_time - self.start_time
             return round(delta.total_seconds() / 3600, 1)
         return None
+
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(20), default='chat')  # chat, radio, broadcast, sos
+    is_emergency = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    # Relationships
+    incident = db.relationship('Incident', backref='messages')
+    user = db.relationship('UserModel', foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f"<Message {self.id}: {self.message[:50]}>"
+
+
+class MessageTemplate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(30), default='general')  # general, status, request, emergency
+    order = db.Column(db.Integer, default=0)
+
+    def __repr__(self):
+        return f"<Template {self.name}>"

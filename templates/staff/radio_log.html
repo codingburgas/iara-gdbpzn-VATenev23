@@ -1,0 +1,64 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>📻 Radio Log - Incident #{{ incident.id }}</h2>
+        <p class="text-muted">{{ incident.title }} | {{ incident.location }}</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">🎙️ Log Radio Transmission</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.unit.label(class="form-label") }}
+                        {{ form.unit(class="form-control", placeholder="e.g., Engine 101, Ladder 3, Command") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.message.label(class="form-label") }}
+                        {{ form.message(class="form-control", rows=3, placeholder="Transmission text...") }}
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">📡 Log Transmission</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">📻 Radio Log</h5>
+            </div>
+            <div class="card-body" style="height: 500px; overflow-y: auto;">
+                {% for msg in radio_messages %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-primary">📻 {{ msg.user.username }}</strong>
+                        <small class="text-muted">{{ msg.created_at.strftime('%H:%M:%S') }}</small>
+                    </div>
+                    <p class="mb-0 font-monospace">{{ msg.message }}</p>
+                </div>
+                {% else %}
+                <p class="text-muted">No radio transmissions yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <a href="{{ url_for('incident_chat', incident_id=incident.id) }}" class="btn btn-secondary">
+            ← Back to Chat
+        </a>
+    </div>
+</div>
+{% endblock %}

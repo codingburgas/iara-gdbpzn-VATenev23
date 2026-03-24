@@ -62,32 +62,46 @@ vehicles = [
         "id": 101,
         "type": "Fire Truck - Aerial Ladder",
         "location": "Burgas Central Station",
-        "team": [1, 2, 3]
+        "team": [1, 2, 3],
+        "latitude": 42.5063,
+        "longitude": 27.4678,
+        "status": "station"
     },
     {
         "id": 102,
         "type": "Fire Engine - Water Tanker",
         "location": "Burgas Central Station",
-        "team": [4, 5]
+        "team": [4, 5],
+        "latitude": 42.5063,
+        "longitude": 27.4678,
+        "status": "station"
     },
     {
         "id": 103,
         "type": "Command Vehicle",
         "location": "Burgas Central Station",
-        "team": [7]
+        "team": [7],
+        "latitude": 42.5063,
+        "longitude": 27.4678,
+        "status": "station"
     },
     {
         "id": 104,
         "type": "Rescue Vehicle",
         "location": "Burgas Station 2 - Industrial Zone",
-        "team": []
+        "team": [],
+        "latitude": 42.4815,
+        "longitude": 27.4412,
+        "status": "station"
     },
     {
         "id": 105,
         "type": "Ambulance",
         "location": "Burgas Station 1",
-        "team": []
+        "team": [],
+        "latitude": 42.5132,
+        "longitude": 27.4628,
+        "status": "station"
     }
 ]
-
 incidents = []

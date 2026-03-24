@@ -3,10 +3,11 @@ from flask_bootstrap import Bootstrap
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 
-from models import db, UserModel, Vehicle, Firefighter, Incident, StatusUpdate, Notification, Shift, Equipment, EquipmentAssignment
+from models import db, UserModel, Vehicle, Firefighter, Incident, StatusUpdate, Notification, Shift, Equipment, EquipmentAssignment, Message, MessageTemplate
 from forms import (RegisterForm, LoginForm, IncidentForm, StatusUpdateForm,
                    ShiftStartForm, ShiftEndForm, FirefighterStatusForm,
-                   EquipmentForm, EquipmentCheckoutForm, EquipmentReturnForm)
+                   EquipmentForm, EquipmentCheckoutForm, EquipmentReturnForm,
+                   MessageForm, RadioLogForm, TemplateForm)
 from utils import login_required, role_required, duration_filter, geocode_address, create_notification, generate_incident_pdf
 
 app = Flask(__name__)
@@ -195,6 +196,113 @@ def equipment_list():
                            vehicles=vehicles)
 
 
+@app.route('/staff/vehicle/<int:vehicle_id>/update-location', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander', 'firefighter')
+def update_vehicle_location(vehicle_id):
+    """Update vehicle GPS location"""
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+    data = request.get_json()
+
+    if 'latitude' in data and 'longitude' in data:
+        vehicle.latitude = data['latitude']
+        vehicle.longitude = data['longitude']
+        vehicle.last_updated = datetime.datetime.utcnow()
+
+        # Update status based on location relative to incident
+        if 'status' in data:
+            vehicle.status = data['status']
+
+        db.session.commit()
+
+        return {'success': True, 'message': f'{vehicle.type} location updated'}
+
+    return {'error': 'Missing coordinates'}, 400
+
+
+@app.route('/staff/vehicle/<int:vehicle_id>/assign-incident/<int:incident_id>', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def assign_vehicle_to_incident(vehicle_id, incident_id):
+    """Assign a vehicle to an incident and update its status"""
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+    incident = Incident.query.get_or_404(incident_id)
+
+    vehicle.status = 'en_route'
+    vehicle.current_incident_id = incident.id
+
+    # Update incident with assigned vehicle if not already set
+    if not incident.assigned_vehicle_id:
+        incident.assigned_vehicle_id = vehicle.id
+
+    db.session.commit()
+
+    flash(f'{vehicle.type} dispatched to {incident.title}', 'success')
+
+    # Create notification for firefighters on this vehicle
+    for firefighter in vehicle.firefighters:
+        user = UserModel.query.filter_by(username=firefighter.name).first()
+        if user:
+            create_notification(
+                user_id=user.id,
+                title=f'Dispatch Alert',
+                message=f'Your unit has been dispatched to {incident.title}',
+                incident_id=incident.id
+            )
+
+    return redirect(url_for('incident_detail', incident_id=incident.id))
+
+
+@app.route('/staff/vehicle/<int:vehicle_id>/eta/<int:incident_id>')
+@login_required
+def calculate_eta(vehicle_id, incident_id):
+    """Calculate ETA from vehicle to incident"""
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+    incident = Incident.query.get_or_404(incident_id)
+
+    if not vehicle.latitude or not vehicle.longitude or not incident.latitude or not incident.longitude:
+        return {'eta': 'N/A', 'error': 'Missing coordinates'}
+
+    # Calculate distance using Haversine formula
+    from math import radians, sin, cos, sqrt, atan2
+
+    R = 6371  # Earth radius in km
+
+    lat1 = radians(vehicle.latitude)
+    lon1 = radians(vehicle.longitude)
+    lat2 = radians(incident.latitude)
+    lon2 = radians(incident.longitude)
+
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    distance = R * c
+
+    # Assume average speed 60 km/h for emergency vehicles
+    speed = vehicle.speed or 60
+    eta_minutes = (distance / speed) * 60
+
+    return {
+        'distance': round(distance, 1),
+        'eta_minutes': round(eta_minutes, 1),
+        'eta_text': f"{int(eta_minutes)} min" if eta_minutes < 60 else f"{int(eta_minutes / 60)}h {int(eta_minutes % 60)}min"
+    }
+
+
+@app.route('/staff/vehicle-tracking')
+@login_required
+@role_required('dispatcher', 'commander', 'firefighter')
+def vehicle_tracking():
+    """View vehicle GPS tracking"""
+    vehicles = Vehicle.query.all()
+    incidents = Incident.query.filter(Incident.status != 'Closed').all()
+
+    return render_template('staff/vehicle_tracking.html',
+                           vehicles=vehicles,
+                           incidents=incidents)
 @app.route('/staff/equipment/add', methods=['GET', 'POST'])
 @login_required
 @role_required('commander')
@@ -579,7 +687,13 @@ def assign_firefighter(firefighter_id):
             firefighter.vehicle_id = vehicle_id
             db.session.commit()
             flash(f'{firefighter.name} assigned to vehicle successfully!', 'success')
-            return redirect(url_for('staff_firefighters'))
+        else:
+            # Unassign
+            firefighter.vehicle_id = None
+            db.session.commit()
+            flash(f'{firefighter.name} unassigned from vehicle.', 'info')
+
+        return redirect(url_for('staff_firefighters'))
 
     return render_template('staff/assign_firefighter.html',
                            firefighter=firefighter,
@@ -867,6 +981,172 @@ def quick_status_update(incident_id):
     )
 
     return {'success': True, 'new_status': new_status}
+
+
+# ========== COMMUNICATION ROUTES ==========
+@app.route('/staff/incident/<int:incident_id>/chat', methods=['GET', 'POST'])
+@login_required
+def incident_chat(incident_id):
+    """Incident-specific chat channel"""
+    incident = Incident.query.get_or_404(incident_id)
+    form = MessageForm()
+    templates = MessageTemplate.query.order_by(MessageTemplate.order).all()
+
+    if form.validate_on_submit():
+        message = Message(
+            incident_id=incident.id,
+            user_id=session.get('user_id'),
+            message=form.message.data,
+            message_type='broadcast' if form.is_emergency.data else 'chat',
+            is_emergency=form.is_emergency.data
+        )
+        db.session.add(message)
+        db.session.commit()
+
+        # Create notification for all users assigned to this incident
+        if form.is_emergency.data:
+            notify_users_about_incident(incident.id, form.message.data)
+            flash('🚨 EMERGENCY BROADCAST SENT! 🚨', 'danger')
+        else:
+            flash('Message sent', 'success')
+
+        return redirect(url_for('incident_chat', incident_id=incident.id))
+
+    # Get messages for this incident
+    messages = Message.query.filter_by(incident_id=incident.id).order_by(Message.created_at).all()
+
+    return render_template('staff/incident_chat.html',
+                           incident=incident,
+                           form=form,
+                           messages=messages,
+                           templates=templates)
+
+
+@app.route('/staff/incident/<int:incident_id>/chat/quick', methods=['POST'])
+@login_required
+def quick_message(incident_id):
+    """Send a quick message using template"""
+    incident = Incident.query.get_or_404(incident_id)
+    template_id = request.json.get('template_id')
+    template = MessageTemplate.query.get(template_id)
+
+    if template:
+        message = Message(
+            incident_id=incident.id,
+            user_id=session.get('user_id'),
+            message=template.message,
+            message_type='chat',
+            is_emergency=False
+        )
+        db.session.add(message)
+        db.session.commit()
+        return {'success': True, 'message': template.message}
+
+    return {'error': 'Template not found'}, 404
+
+
+@app.route('/staff/incident/<int:incident_id>/radio', methods=['GET', 'POST'])
+@login_required
+def radio_log(incident_id):
+    """Simulated radio log for incident"""
+    incident = Incident.query.get_or_404(incident_id)
+    form = RadioLogForm()
+
+    if form.validate_on_submit():
+        # Format as radio transmission
+        transmission = f"[{form.unit.data}] {form.message.data}"
+
+        message = Message(
+            incident_id=incident.id,
+            user_id=session.get('user_id'),
+            message=transmission,
+            message_type='radio'
+        )
+        db.session.add(message)
+        db.session.commit()
+
+        flash(f'Radio transmission logged', 'info')
+        return redirect(url_for('radio_log', incident_id=incident.id))
+
+    # Get radio messages only
+    radio_messages = Message.query.filter_by(
+        incident_id=incident.id,
+        message_type='radio'
+    ).order_by(Message.created_at.desc()).all()
+
+    return render_template('staff/radio_log.html',
+                           incident=incident,
+                           form=form,
+                           radio_messages=radio_messages)
+
+
+@app.route('/staff/templates')
+@login_required
+@role_required('dispatcher', 'commander')
+def manage_templates():
+    """Manage message templates"""
+    templates = MessageTemplate.query.order_by(MessageTemplate.category, MessageTemplate.order).all()
+    return render_template('staff/templates.html', templates=templates)
+
+
+@app.route('/staff/templates/add', methods=['GET', 'POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def add_template():
+    """Add new message template"""
+    form = TemplateForm()
+
+    if form.validate_on_submit():
+        template = MessageTemplate(
+            name=form.name.data,
+            message=form.message.data,
+            category=form.category.data
+        )
+        db.session.add(template)
+        db.session.commit()
+        flash(f'Template "{template.name}" added!', 'success')
+        return redirect(url_for('manage_templates'))
+
+    return render_template('staff/template_form.html', form=form, title="Add Template")
+
+
+@app.route('/staff/templates/<int:template_id>/delete', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def delete_template(template_id):
+    """Delete a message template"""
+    template = MessageTemplate.query.get_or_404(template_id)
+    db.session.delete(template)
+    db.session.commit()
+    flash(f'Template "{template.name}" deleted.', 'warning')
+    return redirect(url_for('manage_templates'))
+
+
+def notify_users_about_incident(incident_id, message):
+    """Notify all users involved in incident"""
+    incident = Incident.query.get(incident_id)
+
+    # Notify dispatcher who reported
+    if incident.reported_by:
+        create_notification(
+            user_id=incident.reported_by,
+            title=f'🚨 EMERGENCY - Incident #{incident.id}',
+            message=message,
+            incident_id=incident.id
+        )
+
+    # Notify firefighters on assigned vehicle
+    if incident.assigned_vehicle:
+        for firefighter in incident.assigned_vehicle.firefighters:
+            user = UserModel.query.filter_by(username=firefighter.name).first()
+            if user:
+                create_notification(
+                    user_id=user.id,
+                    title=f'🚨 EMERGENCY ALERT',
+                    message=message,
+                    incident_id=incident.id
+                )
+
 @app.route('/staff/firefighters')
 @login_required
 @role_required('dispatcher', 'commander')
@@ -938,7 +1218,10 @@ def staff_import_data():
             vehicle = Vehicle(
                 id=v['id'],
                 type=v['type'],
-                location=v['location']
+                location=v['location'],
+                latitude=v.get('latitude'),
+                longitude=v.get('longitude'),
+                status=v.get('status', 'station')
             )
             db.session.add(vehicle)
 
@@ -1047,6 +1330,9 @@ def create_first_commander():
 with app.app_context():
     db.create_all()
     print("Database tables created/updated!")
+
+    from utils import create_default_templates
+    create_default_templates()
 
 if __name__ == '__main__':
     app.run(debug=True)
