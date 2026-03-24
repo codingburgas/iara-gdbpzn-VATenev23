@@ -3,11 +3,14 @@ from flask_bootstrap import Bootstrap
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 
-from models import db, UserModel, Vehicle, Firefighter, Incident, StatusUpdate, Notification, Shift, Equipment, EquipmentAssignment, Message, MessageTemplate
+from models import (db, UserModel, Vehicle, Firefighter, Incident, StatusUpdate, Notification, Shift, Equipment, EquipmentAssignment,
+                    Message, MessageTemplate, VolunteerApplication, TrainingSession, TrainingParticipant)
+
 from forms import (RegisterForm, LoginForm, IncidentForm, StatusUpdateForm,
                    ShiftStartForm, ShiftEndForm, FirefighterStatusForm,
                    EquipmentForm, EquipmentCheckoutForm, EquipmentReturnForm,
-                   MessageForm, RadioLogForm, TemplateForm)
+                   MessageForm, RadioLogForm, TemplateForm,
+                   VolunteerApplicationForm, ApplicationReviewForm, TrainingForm)
 from utils import login_required, role_required, duration_filter, geocode_address, create_notification, generate_incident_pdf
 
 app = Flask(__name__)
@@ -85,6 +88,145 @@ def portal_redirect():
     return redirect(url_for('staff_login'))
 
 
+# ========== VOLUNTEER MANAGEMENT ROUTES ==========
+
+@app.route('/volunteer/apply', methods=['GET', 'POST'])
+def volunteer_apply():
+    """Public volunteer application page"""
+    form = VolunteerApplicationForm()
+
+    if form.validate_on_submit():
+        application = VolunteerApplication(
+            full_name=form.full_name.data,
+            email=form.email.data,
+            phone=form.phone.data,
+            age=form.age.data,
+            address=form.address.data,
+            motivation=form.motivation.data,
+            experience=form.experience.data,
+            status='pending'
+        )
+        db.session.add(application)
+        db.session.commit()
+
+        flash('Thank you for your interest! We will review your application and contact you soon.', 'success')
+        return redirect(url_for('home'))
+
+    return render_template('public/volunteer_apply.html', form=form)
+
+
+@app.route('/staff/volunteers')
+@login_required
+@role_required('commander', 'dispatcher')
+def volunteer_applications():
+    """View all volunteer applications"""
+    applications = VolunteerApplication.query.order_by(VolunteerApplication.applied_at.desc()).all()
+
+    stats = {
+        'total': len(applications),
+        'pending': sum(1 for a in applications if a.status == 'pending'),
+        'approved': sum(1 for a in applications if a.status == 'approved'),
+        'trained': sum(1 for a in applications if a.status == 'trained')
+    }
+
+    return render_template('staff/volunteers.html',
+                           applications=applications,
+                           stats=stats)
+
+
+@app.route('/staff/volunteer/<int:app_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('commander')
+def review_volunteer(app_id):
+    """Review a volunteer application"""
+    application = VolunteerApplication.query.get_or_404(app_id)
+    form = ApplicationReviewForm()
+
+    if form.validate_on_submit():
+        application.status = form.status.data
+        application.notes = form.notes.data
+        application.reviewed_by = session.get('user_id')
+        application.reviewed_at = datetime.datetime.utcnow()
+        db.session.commit()
+
+        # If approved, create notification
+        if form.status.data == 'approved':
+            create_notification(
+                user_id=application.reviewed_by,
+                title=f'Volunteer Application Approved',
+                message=f'{application.full_name} has been approved for training',
+                incident_id=None
+            )
+
+        flash(f'Application for {application.full_name} updated to {form.status.data}', 'success')
+        return redirect(url_for('volunteer_applications'))
+
+    # Pre-fill form
+    form.status.data = application.status
+    form.notes.data = application.notes
+
+    return render_template('staff/review_volunteer.html',
+                           application=application,
+                           form=form)
+
+
+@app.route('/staff/trainings')
+@login_required
+@role_required('commander')
+def trainings():
+    """View all training sessions"""
+    upcoming = TrainingSession.query.filter(
+        TrainingSession.date > datetime.datetime.utcnow(),
+        TrainingSession.status != 'cancelled'
+    ).order_by(TrainingSession.date).all()
+
+    past = TrainingSession.query.filter(
+        TrainingSession.date <= datetime.datetime.utcnow()
+    ).order_by(TrainingSession.date.desc()).all()
+
+    return render_template('staff/trainings.html',
+                           upcoming=upcoming,
+                           past=past)
+
+
+@app.route('/staff/training/add', methods=['GET', 'POST'])
+@login_required
+@role_required('commander')
+def add_training():
+    """Schedule a new training session"""
+    form = TrainingForm()
+
+    if form.validate_on_submit():
+        training = TrainingSession(
+            title=form.title.data,
+            description=form.description.data,
+            date=form.date.data,
+            duration_hours=form.duration_hours.data,
+            location=form.location.data,
+            max_participants=form.max_participants.data,
+            instructor=form.instructor.data,
+            created_by=session.get('user_id')
+        )
+        db.session.add(training)
+        db.session.commit()
+
+        flash(f'Training "{training.title}" scheduled!', 'success')
+        return redirect(url_for('trainings'))
+
+    return render_template('staff/training_form.html', form=form, title="Schedule Training")
+
+
+@app.route('/staff/training/<int:training_id>/enroll')
+@login_required
+@role_required('commander')
+def enroll_volunteers(training_id):
+    """Enroll approved volunteers in training"""
+    training = TrainingSession.query.get_or_404(training_id)
+    approved_volunteers = VolunteerApplication.query.filter_by(status='approved').all()
+
+    return render_template('staff/enroll_volunteers.html',
+                           training=training,
+                           volunteers=approved_volunteers)
 @app.route('/staff/login', methods=['GET', 'POST'])
 def staff_login():
     """Professional staff login page"""

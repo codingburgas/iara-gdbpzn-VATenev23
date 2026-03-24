@@ -71,6 +71,7 @@
                     <a href="{{ url_for('staff_report_incident') }}" class="btn btn-danger btn-sm">+ New Incident</a>
                     <a href="{{ url_for('staff_firefighters') }}" class="btn btn-outline-secondary btn-sm">Resources</a>
                     <a href="{{ url_for('manage_templates') }}" class="btn btn-outline-secondary btn-sm">📝 Templates</a>
+                    <a href="{{ url_for('volunteer_applications') }}" class="btn btn-outline-secondary btn-sm">👥 Volunteers</a>
                 {% if session.user_role == 'commander' %}
     <a href="{{ url_for('staff_register') }}" class="btn btn-success btn-sm">➕ Register Staff</a>
     {% endif %}

@@ -1,0 +1,95 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Volunteer Applications</h2>
+    <div>
+        <a href="{{ url_for('trainings') }}" class="btn btn-info">🎓 Training Sessions</a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>Total Applications</h6>
+                <h3>{{ stats.total }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h6>Pending Review</h6>
+                <h3>{{ stats.pending }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6>Approved</h6>
+                <h3>{{ stats.approved }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6>Trained</h6>
+                <h3>{{ stats.trained }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Applications Table -->
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">All Applications</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Age</th>
+                        <th>Applied</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>#{{ app.id }}</td>
+                        <td>{{ app.full_name }}</td>
+                        <td>{{ app.email }}</td>
+                        <td>{{ app.age }}</td>
+                        <td>{{ app.applied_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <span class="badge bg-{% if app.status == 'pending' %}warning
+                                                   {% elif app.status == 'approved' %}success
+                                                   {% elif app.status == 'rejected' %}danger
+                                                   {% else %}info{% endif %}">
+                                {{ app.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('review_volunteer', app_id=app.id) }}" class="btn btn-sm btn-outline-primary">Review</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No applications yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
