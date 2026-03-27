@@ -15,8 +15,6 @@
         .dropdown-menu { background-color: #343a40; }
         .dropdown-item { color: white; }
         .dropdown-item:hover { background-color: #dc3545; color: white; }
-        .btn-group-sm .btn { font-size: 0.75rem; }
-        .navbar-divider { width: 1px; height: 30px; background-color: rgba(255,255,255,0.2); margin: 0 10px; }
     </style>
 </head>
 <body>
@@ -45,7 +43,6 @@
         {% if session.logged_in and session.user_role in ['dispatcher', 'commander', 'firefighter'] %}
         <div class="row mb-3">
             <div class="col">
-                <!-- Main Navigation - Using Bootstrap Navbar with Dropdowns -->
                 <nav class="navbar navbar-expand-lg navbar-dark bg-secondary rounded p-2">
                     <div class="container-fluid">
                         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#staffNavbar">
@@ -53,68 +50,60 @@
                         </button>
                         <div class="collapse navbar-collapse" id="staffNavbar">
                             <ul class="navbar-nav me-auto">
-                                <!-- Dashboard -->
+                                <!-- Dashboard - visible to all -->
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('dashboard.dynamic_dashboard') }}">
-                                        📊 Dashboard
-                                    </a>
+                                    <a class="nav-link" href="{{ url_for('dashboard.dynamic_dashboard') }}">📊 Dashboard</a>
                                 </li>
 
-                                <!-- Incidents Dropdown -->
+                                <!-- Incidents - visible to all -->
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        🚨 Incidents
-                                    </a>
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">🚨 Incidents</a>
                                     <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="{{ url_for('incidents.list_incidents') }}">📋 All Incidents</a></li>
+                                        {% if session.user_role in ['dispatcher', 'commander'] %}
                                         <li><a class="dropdown-item" href="{{ url_for('incidents.report_incident') }}">➕ Report New Incident</a></li>
-                                        <li><hr class="dropdown-divider"></li>
+                                        {% endif %}
                                         <li><a class="dropdown-item" href="{{ url_for('map.incident_map') }}">🗺️ Incident Map</a></li>
                                     </ul>
                                 </li>
 
-                                <!-- Operations Dropdown -->
+                                <!-- Operations - only for dispatcher/commander -->
+                                {% if session.user_role in ['dispatcher', 'commander'] %}
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        🚒 Operations
-                                    </a>
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">🚒 Operations</a>
                                     <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="{{ url_for('personnel.vehicle_tracking') }}">🚗 GPS Tracking</a></li>
                                         <li><a class="dropdown-item" href="{{ url_for('personnel.shift_management') }}">⏱️ Shift Management</a></li>
                                         <li><a class="dropdown-item" href="{{ url_for('equipment.list_equipment') }}">🔧 Equipment Inventory</a></li>
                                     </ul>
                                 </li>
+                                {% endif %}
 
-                                <!-- Personnel Dropdown -->
+                                <!-- Personnel - only for dispatcher/commander -->
+                                {% if session.user_role in ['dispatcher', 'commander'] %}
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        👥 Personnel
-                                    </a>
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">👥 Personnel</a>
                                     <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="{{ url_for('personnel.list_firefighters') }}">👨‍🚒 Firefighters</a></li>
                                         <li><a class="dropdown-item" href="{{ url_for('personnel.list_firefighters') }}#vehicles">🚛 Vehicles</a></li>
-                                        <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" href="{{ url_for('personnel.import_data') }}">📥 Import Data</a></li>
                                     </ul>
                                 </li>
+                                {% endif %}
 
-                                <!-- Communication Dropdown -->
+                                <!-- Communication - visible to all -->
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        💬 Communication
-                                    </a>
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">💬 Communication</a>
                                     <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="{{ url_for('communications.manage_templates') }}">📝 Message Templates</a></li>
                                         <li><a class="dropdown-item" href="{{ url_for('notifications.view_notifications') }}">🔔 Notifications</a></li>
                                     </ul>
                                 </li>
 
-                                <!-- Volunteer Dropdown (Only for Commander/Dispatcher) -->
+                                <!-- Volunteer - only for commander/dispatcher -->
                                 {% if session.user_role in ['commander', 'dispatcher'] %}
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        🤝 Volunteers
-                                    </a>
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">🤝 Volunteers</a>
                                     <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="{{ url_for('volunteers.applications_list') }}">📋 Applications</a></li>
                                         <li><a class="dropdown-item" href="{{ url_for('volunteers.trainings_list') }}">🎓 Trainings</a></li>
@@ -122,16 +111,13 @@
                                 </li>
                                 {% endif %}
 
-                                <!-- Admin Dropdown (Only for Commander) -->
+                                <!-- Admin - only for commander -->
                                 {% if session.user_role == 'commander' %}
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        ⚙️ Admin
-                                    </a>
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">⚙️ Admin</a>
                                     <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="{{ url_for('auth.staff_register') }}">➕ Register Staff</a></li>
                                         <li><a class="dropdown-item" href="{{ url_for('incidents.export_incidents') }}">📥 Export Incidents</a></li>
-                                        <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" href="{{ url_for('equipment.import_equipment') }}">📦 Import Default Equipment</a></li>
                                     </ul>
                                 </li>

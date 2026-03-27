@@ -7,11 +7,13 @@ from app.models.shift import Shift
 from app.models.equipment import Equipment, EquipmentAssignment
 from app.models.communication import Message, MessageTemplate, SOSAlert
 from app.models.volunteer import VolunteerApplication, TrainingSession, TrainingParticipant
+from app.models.task import Task
 from app import db
 
 __all__ = [
     'db', 'UserModel', 'Vehicle', 'Firefighter', 'Incident',
     'StatusUpdate', 'Notification', 'Shift', 'Equipment',
     'EquipmentAssignment', 'Message', 'MessageTemplate', 'SOSAlert',
-    'VolunteerApplication', 'TrainingSession', 'TrainingParticipant'
+    'VolunteerApplication', 'TrainingSession', 'TrainingParticipant',
+    'Task'  # ADD THIS
 ]

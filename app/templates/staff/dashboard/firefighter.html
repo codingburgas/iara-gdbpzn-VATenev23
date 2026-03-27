@@ -84,26 +84,26 @@
             <div class="card-body">
                 {% if firefighter %}
                 <table class="table table-sm">
-                     <tr>
+                      <tr>
                         <th>Name:</th>
                         <td>{{ firefighter.name }}</td>
-                    </tr>
-                    <tr>
+                      </tr>
+                      <tr>
                         <th>Rank:</th>
                         <td>{{ firefighter.rank }}</td>
-                    </tr>
-                    <tr>
+                      </tr>
+                      <tr>
                         <th>Employee ID:</th>
                         <td>{{ firefighter.employee_id or 'Not set' }}</td>
-                    </tr>
-                    <tr>
+                      </tr>
+                      <tr>
                         <th>Phone:</th>
                         <td>{{ firefighter.phone or 'Not set' }}</td>
-                    </tr>
-                    <tr>
+                      </tr>
+                      <tr>
                         <th>Hire Date:</th>
                         <td>{{ firefighter.hire_date.strftime('%d/%m/%Y') if firefighter.hire_date else 'Not set' }}</td>
-                    </tr>
+                      </tr>
                 </table>
                 {% else %}
                 <div class="alert alert-warning">
@@ -166,7 +166,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
-                             <tr>
+                              <tr>
                                 <th>ID</th>
                                 <th>Type</th>
                                 <th>Title</th>
@@ -174,7 +174,7 @@
                                 <th>Status</th>
                                 <th>Reported</th>
                                 <th>Actions</th>
-                            </tr>
+                              </tr>
                         </thead>
                         <tbody>
                             {% for incident in incidents %}
@@ -237,10 +237,80 @@
     </div>
 </div>
 
+<!-- My Tasks Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">📋 My Assigned Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% if tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                             <tr>
+                                <th>Task</th>
+                                <th>Incident</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Deadline</th>
+                                <th>Actions</th>
+                             </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks %}
+                            <tr>
+                                <td>{{ task.title|truncate(30) }}</td>
+                                <td>
+                                    <a href="{{ url_for('incidents.detail', incident_id=task.incident_id) }}">
+                                        #{{ task.incident.id }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if task.priority == 'urgent' %}danger
+                                                           {% elif task.priority == 'high' %}warning
+                                                           {% elif task.priority == 'normal' %}info
+                                                           {% else %}secondary{% endif %}">
+                                        {{ task.priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if task.status == 'pending' %}warning
+                                                           {% elif task.status == 'in_progress' %}info
+                                                           {% elif task.status == 'completed' %}success
+                                                           {% else %}secondary{% endif %}">
+                                        {{ task.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if task.deadline %}
+                                        {{ task.deadline.strftime('%d/%m %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">No deadline</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('incidents.task_detail', task_id=task.id) }}" class="btn btn-sm btn-outline-primary">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No tasks assigned to you.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- JavaScript for actions -->
 <script>
 function updateStatus(status) {
-    // This would connect to your backend
     alert('Status update to ' + status + ' - Backend integration coming soon!');
 }
 
@@ -270,45 +340,42 @@ function updateIncidentStatus(incidentId, status) {
 
 // SOS Function
 function sendSOS() {
-    console.log("SOS button clicked");  // <-- ADD THIS
+    console.log("SOS button clicked");
 
     if (confirm('🚨 WARNING! 🚨\n\nThis will send an EMERGENCY SOS signal to all dispatchers and nearby units. Only use in life-threatening situations.\n\nAre you absolutely sure?')) {
 
-        console.log("Confirmed, sending SOS...");  // <-- ADD THIS
+        console.log("Confirmed, sending SOS...");
 
-        // Disable button to prevent multiple clicks
         var sosBtn = document.getElementById('sosButton');
         sosBtn.disabled = true;
         sosBtn.innerHTML = '🚨 SENDING SOS... 🚨';
 
-        // Get the first incident ID if available
         var incidentId = null;
         {% if incidents %}
             incidentId = {{ incidents[0].id }};
-            console.log("Incident ID:", incidentId);  // <-- ADD THIS
+            console.log("Incident ID:", incidentId);
         {% endif %}
 
-        // Try to get current location if available
         if (navigator.geolocation) {
-            console.log("Getting location...");  // <-- ADD THIS
+            console.log("Getting location...");
             navigator.geolocation.getCurrentPosition(function(position) {
-                console.log("Location obtained:", position.coords.latitude, position.coords.longitude);  // <-- ADD THIS
+                console.log("Location obtained:", position.coords.latitude, position.coords.longitude);
                 sendSOSRequest(position.coords.latitude, position.coords.longitude, incidentId);
             }, function(error) {
                 console.warn('Geolocation error:', error);
                 sendSOSRequest(null, null, incidentId);
             });
         } else {
-            console.log("Geolocation not available");  // <-- ADD THIS
+            console.log("Geolocation not available");
             sendSOSRequest(null, null, incidentId);
         }
     } else {
-        console.log("SOS cancelled");  // <-- ADD THIS
+        console.log("SOS cancelled");
     }
 }
 
 function sendSOSRequest(lat, lng, incidentId) {
-    console.log("sendSOSRequest called with:", lat, lng, incidentId);  // <-- ADD THIS
+    console.log("sendSOSRequest called with:", lat, lng, incidentId);
 
     var data = {
         incident_id: incidentId,
@@ -320,7 +387,7 @@ function sendSOSRequest(lat, lng, incidentId) {
         data.longitude = lng;
     }
 
-    console.log("Sending POST to /staff/sos with data:", data);  // <-- ADD THIS
+    console.log("Sending POST to /staff/sos with data:", data);
 
     fetch('/staff/sos', {
         method: 'POST',
@@ -330,11 +397,11 @@ function sendSOSRequest(lat, lng, incidentId) {
         body: JSON.stringify(data)
     })
     .then(response => {
-        console.log("Response status:", response.status);  // <-- ADD THIS
+        console.log("Response status:", response.status);
         return response.json();
     })
     .then(data => {
-        console.log("Response data:", data);  // <-- ADD THIS
+        console.log("Response data:", data);
         if (data.success) {
             alert('🚨 SOS ALERT SENT! 🚨\n\nHelp is on the way. Stay calm and await assistance.');
             var sosBtn = document.getElementById('sosButton');
@@ -348,7 +415,7 @@ function sendSOSRequest(lat, lng, incidentId) {
         }
     })
     .catch(error => {
-        console.error('Fetch error:', error);  // <-- ADD THIS
+        console.error('Fetch error:', error);
         alert('Error sending SOS: ' + error.message);
         document.getElementById('sosButton').disabled = false;
         document.getElementById('sosButton').innerHTML = '🚨 EMERGENCY SOS 🚨';

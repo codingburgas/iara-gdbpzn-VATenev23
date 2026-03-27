@@ -282,3 +282,148 @@ def export_incidents():
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=incidents_export.csv"}
     )
+
+
+# ========== TASK MANAGEMENT ROUTES ==========
+
+@incidents_bp.route('/staff/incident/<int:incident_id>/tasks')
+@login_required
+def incident_tasks(incident_id):
+    """View all tasks for an incident"""
+    from app.models.task import Task
+    incident = Incident.query.get_or_404(incident_id)
+    tasks = Task.query.filter_by(incident_id=incident_id).order_by(Task.created_at.desc()).all()
+
+    # Get firefighters for assignment dropdown
+    firefighters = Firefighter.query.filter_by(status='available').all()
+
+    return render_template('staff/incidents/tasks.html',
+                           incident=incident,
+                           tasks=tasks,
+                           firefighters=firefighters)
+
+
+@incidents_bp.route('/staff/incident/<int:incident_id>/tasks/add', methods=['GET', 'POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def add_task(incident_id):
+    """Add a new task to an incident"""
+    from app.models.task import Task
+    from app.forms.incident_forms import TaskForm
+
+    incident = Incident.query.get_or_404(incident_id)
+    form = TaskForm()
+
+    # Populate assignee choices
+    firefighters = Firefighter.query.all()
+    form.assigned_to.choices = [(0, '-- Not Assigned --')] + [(f.id, f"{f.name} ({f.rank})") for f in firefighters]
+
+    if form.validate_on_submit():
+        # Parse deadline if provided
+        deadline = None
+        if form.deadline.data:
+            try:
+                deadline = datetime.datetime.strptime(form.deadline.data, '%Y-%m-%d %H:%M')
+            except:
+                flash('Invalid deadline format. Use YYYY-MM-DD HH:MM', 'warning')
+
+        task = Task(
+            title=form.title.data,
+            description=form.description.data,
+            incident_id=incident.id,
+            assigned_to=form.assigned_to.data if form.assigned_to.data != 0 else None,
+            created_by=session.get('user_id'),
+            priority=form.priority.data,
+            deadline=deadline,
+            notes=form.notes.data,
+            status='pending'
+        )
+
+        db.session.add(task)
+        db.session.commit()
+
+        # Create notification for assigned firefighter
+        if task.assigned_to:
+            user = UserModel.query.filter_by(username=task.assignee.name).first()
+            if user:
+                create_notification(
+                    user_id=user.id,
+                    title=f'New Task Assigned',
+                    message=f'You have been assigned: {task.title} for incident #{incident.id}',
+                    incident_id=incident.id
+                )
+
+        flash(f'Task "{task.title}" created successfully!', 'success')
+        return redirect(url_for('incidents.incident_tasks', incident_id=incident.id))
+
+    return render_template('staff/incidents/add_task.html',
+                           incident=incident,
+                           form=form)
+
+
+@incidents_bp.route('/staff/task/<int:task_id>')
+@login_required
+def task_detail(task_id):
+    """View task details"""
+    from app.models.task import Task
+    from app.forms.incident_forms import TaskStatusForm
+
+    task = Task.query.get_or_404(task_id)
+    form = TaskStatusForm()
+
+    return render_template('staff/incidents/task_detail.html',
+                           task=task,
+                           form=form)
+
+
+@incidents_bp.route('/staff/task/<int:task_id>/update', methods=['POST'])
+@login_required
+def update_task_status(task_id):
+    """Update task status"""
+    from app.models.task import Task
+    from app.forms.incident_forms import TaskStatusForm
+
+    task = Task.query.get_or_404(task_id)
+    form = TaskStatusForm()
+
+    if form.validate_on_submit():
+        old_status = task.status
+        task.status = form.status.data
+        task.notes = (
+                                 task.notes or '') + f"\n\n{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} - Status changed to {form.status.data}: {form.notes.data}" if form.notes.data else task.notes
+
+        if form.status.data == 'completed' and not task.completed_at:
+            task.completed_at = datetime.datetime.utcnow()
+            task.completed_by = session.get('user_id')
+
+        db.session.commit()
+
+        # Notify creator
+        create_notification(
+            user_id=task.created_by,
+            title=f'Task Status Updated',
+            message=f'Task "{task.title}" changed from {old_status} to {task.status}',
+            incident_id=task.incident_id
+        )
+
+        flash(f'Task status updated to {task.status}', 'success')
+        return redirect(url_for('incidents.task_detail', task_id=task.id))
+
+    return redirect(url_for('incidents.task_detail', task_id=task.id))
+
+
+@incidents_bp.route('/staff/task/<int:task_id>/delete', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def delete_task(task_id):
+    """Delete a task"""
+    from app.models.task import Task
+
+    task = Task.query.get_or_404(task_id)
+    incident_id = task.incident_id
+
+    db.session.delete(task)
+    db.session.commit()
+
+    flash(f'Task "{task.title}" deleted.', 'warning')
+    return redirect(url_for('incidents.incident_tasks', incident_id=incident_id))

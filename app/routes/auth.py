@@ -99,3 +99,21 @@ def staff_logout():
     session.clear()
     flash('You have been logged out successfully.', 'info')
     return redirect(url_for('auth.staff_login'))
+
+
+@auth_bp.route('/create-commander')
+def create_commander():
+    from werkzeug.security import generate_password_hash
+
+    if UserModel.query.filter_by(role='commander').first():
+        return "Commander already exists!"
+
+    commander = UserModel(
+        username='commander',
+        email='c@fire.bg',
+        password=generate_password_hash('123456'),
+        role='commander'
+    )
+    db.session.add(commander)
+    db.session.commit()
+    return "Commander created! Login with: c@fire.bg / 123456"

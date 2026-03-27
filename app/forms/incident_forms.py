@@ -29,3 +29,27 @@ class StatusUpdateForm(FlaskForm):
                             validators=[DataRequired()])
     comment = TextAreaField('Comment (optional)', validators=[Optional()])
     submit = SubmitField('Update Status')
+class TaskForm(FlaskForm):
+    title = StringField('Task Title', validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[Optional()])
+    assigned_to = SelectField('Assign To', coerce=int, validators=[Optional()])
+    priority = SelectField('Priority',
+                          choices=[('low', '🟢 Low'),
+                                   ('normal', '🔵 Normal'),
+                                   ('high', '🟠 High'),
+                                   ('urgent', '🔴 Urgent')],
+                          validators=[DataRequired()])
+    deadline = StringField('Deadline (YYYY-MM-DD HH:MM)', validators=[Optional()])
+    notes = TextAreaField('Notes', validators=[Optional()])
+    submit = SubmitField('Create Task')
+
+
+class TaskStatusForm(FlaskForm):
+    status = SelectField('Status',
+                        choices=[('pending', '⏳ Pending'),
+                                 ('in_progress', '🔄 In Progress'),
+                                 ('completed', '✅ Completed'),
+                                 ('cancelled', '❌ Cancelled')],
+                        validators=[DataRequired()])
+    notes = TextAreaField('Completion Notes', validators=[Optional()])
+    submit = SubmitField('Update Status')

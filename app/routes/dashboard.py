@@ -53,15 +53,36 @@ def dispatcher_dashboard():
 @login_required
 @role_required('firefighter', 'commander')
 def firefighter_dashboard():
-    firefighter = Firefighter.query.filter_by(name=session.get('user_name')).first()
+    from app.models.task import Task
+
+    # Find firefighter by user_id (better than by name)
+    firefighter = Firefighter.query.filter_by(user_id=session.get('user_id')).first()
+
+    # If not found by user_id, try by name (fallback)
+    if not firefighter:
+        firefighter = Firefighter.query.filter_by(name=session.get('user_name')).first()
+
     my_incidents = []
-    if firefighter and firefighter.vehicle_id:
-        my_incidents = Incident.query.filter_by(assigned_vehicle_id=firefighter.vehicle_id).all()
+    my_tasks = []
+
+    if firefighter:
+        # Get incidents assigned to this firefighter's vehicle
+        if firefighter.vehicle_id:
+            my_incidents = Incident.query.filter_by(assigned_vehicle_id=firefighter.vehicle_id).all()
+        # Get tasks assigned to this firefighter
+        my_tasks = Task.query.filter_by(
+            assigned_to=firefighter.id,
+            status='pending'
+        ).order_by(Task.priority.desc(), Task.deadline).all()
+
+        print(f"Firefighter found: {firefighter.name}, vehicle: {firefighter.vehicle_id}")
+    else:
+        print(f"No firefighter found for user: {session.get('user_name')} (ID: {session.get('user_id')})")
 
     return render_template('staff/dashboard/firefighter.html',
                            incidents=my_incidents,
-                           firefighter=firefighter)
-
+                           firefighter=firefighter,
+                           tasks=my_tasks)
 
 @dashboard_bp.route('/commander/dashboard')
 @login_required
