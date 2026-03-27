@@ -1,6 +1,13 @@
 {% extends "staff/base.html" %}
 
 {% block content %}
+    <div id="sosAlertBanner" style="display: none;" class="alert alert-danger alert-dismissible fade show">
+    <strong>🚨 SOS ALERT! 🚨</strong> A firefighter has activated an emergency signal.
+    <a href="#" id="sosViewLink" class="alert-link">View on Map</a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div class="row"><div class="col-12"><h2>Dispatcher Dashboard</h2><hr></div></div>
 <div class="row"><div class="col-12"><h2>Dispatcher Dashboard</h2><hr></div></div>
 <div class="row mb-4">
     <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h5 class="card-title">Active Incidents</h5><p class="display-4">{{ active_incidents }}</p></div></div></div>
@@ -24,4 +31,19 @@
         </div></div>
     </div>
 </div>
+    <script>
+// Check for active SOS alerts
+function checkActiveSOS() {
+    fetch('/staff/sos/active')
+        .then(response => response.json())
+        .then(data => {
+            if (data.sos_alerts && data.sos_alerts.length > 0) {
+                document.getElementById('sosAlertBanner').style.display = 'block';
+            }
+        });
+}
+
+setInterval(checkActiveSOS, 30000);
+checkActiveSOS();
+</script>
 {% endblock %}

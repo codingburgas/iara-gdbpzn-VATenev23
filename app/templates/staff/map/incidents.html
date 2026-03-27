@@ -16,6 +16,60 @@ function getIcon(type){let color='#6c757d';if(type==='fire')color='#dc3545';else
 var vehicleIcon=L.divIcon({className:'custom-div-icon',html:`<div style="background-color:#17a2b8;" class="marker-pin"></div><i class="fa-solid fa-truck"></i>`,iconSize:[30,42],iconAnchor:[15,42]});
 {% for incident in incidents %}{% if incident.latitude and incident.longitude %}L.marker([{{ incident.latitude }}, {{ incident.longitude }}],{icon:getIcon('{{ incident.incident_type }}')}).addTo(map).bindPopup(`<b>#{{ incident.id }} - {{ incident.title }}</b><br><span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">{{ incident.incident_type }}</span><br><span class="badge bg-primary">{{ incident.status }}</span><br><small>{{ incident.location }}</small><br><a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary mt-2">View Details</a>`);{% endif %}{% endfor %}
 {% for vehicle in vehicles %}{% if vehicle.latitude and vehicle.longitude %}L.marker([{{ vehicle.latitude }}, {{ vehicle.longitude }}],{icon:vehicleIcon}).addTo(map).bindPopup(`<b>{{ vehicle.type }}</b><br><small>{{ vehicle.location }}</small><br><strong>Crew:</strong><br>{% for f in vehicle.firefighters %}- {{ f.name }} ({{ f.rank }})<br>{% endfor %}`);{% endif %}{% endfor %}
+function loadSOSMarkers() {
+    fetch('/staff/sos/active')
+        .then(response => response.json())
+        .then(data => {
+            data.sos_alerts.forEach(function(sos) {
+                if (sos.latitude && sos.longitude) {
+                    var sosIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: #dc3545; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; animation: pulse 1s infinite;"></div>`,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+
+                    L.marker([sos.latitude, sos.longitude], { icon: sosIcon })
+                        .addTo(map)
+                        .bindPopup(`
+                            <b>🚨 SOS ALERT! 🚨</b><br>
+                            <b>Firefighter:</b> ${sos.firefighter}<br>
+                            <b>Message:</b> ${sos.message}<br>
+                            <button onclick="resolveSOS(${sos.id})" class="btn btn-sm btn-danger mt-2">Acknowledge</button>
+                        `);
+                }
+            });
+        });
+}
+
+function resolveSOS(sosId) {
+    fetch(`/staff/sos/${sosId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+// Add pulse animation CSS
+var style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse {
+        0% { transform: scale(0.8); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.7; }
+        100% { transform: scale(0.8); opacity: 1; }
+    }
+`;
+document.head.appendChild(style);
+
+// Load SOS markers after map loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(loadSOSMarkers, 1000);
+});
 </script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 {% endblock %}

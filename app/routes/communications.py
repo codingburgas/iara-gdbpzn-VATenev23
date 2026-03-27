@@ -3,12 +3,23 @@ from app import db
 from app.models.incident import Incident
 from app.models.user import UserModel
 from app.models.communication import Message, MessageTemplate
-from app.models.vehicle import Vehicle
+from app.models.firefighter import Firefighter
+from app.models.notification import Notification
 from app.forms.communication_forms import MessageForm, RadioLogForm, TemplateForm
 from app.utils import login_required, role_required, create_notification
+import datetime
 
 communications_bp = Blueprint('communications', __name__)
 
+@communications_bp.route('/staff/sos-check', methods=['GET'])
+def sos_check():
+    """Check if SOS route is registered"""
+    return {"message": "Communications blueprint is working", "routes": ["/staff/sos should exist"]}
+
+@communications_bp.route('/staff/sos-test-full', methods=['GET'])
+def sos_test_full():
+    """Test if the SOS route structure works"""
+    return {"status": "OK", "message": "SOS route structure is ready", "note": "Use POST to send actual SOS"}
 
 def notify_users_about_incident(incident_id, message):
     incident = Incident.query.get(incident_id)
@@ -159,3 +170,132 @@ def delete_template(template_id):
     db.session.commit()
     flash(f'Template "{template.name}" deleted.', 'warning')
     return redirect(url_for('communications.manage_templates'))
+
+
+# ========== SOS ROUTES ==========
+
+@communications_bp.route('/staff/sos', methods=['GET', 'POST'])
+def send_sos():
+    """Send SOS alert from firefighter"""
+
+    # For GET requests, return info about the endpoint
+    if request.method == 'GET':
+        return {
+            "message": "SOS endpoint is working",
+            "usage": "Send POST request with incident_id, latitude, longitude, message"
+        }
+
+    # For POST requests, handle the SOS
+    data = request.get_json()
+    print(f"SOS POST received: {data}")
+
+    try:
+        from app.models.firefighter import Firefighter
+        from app.models.communication import SOSAlert
+        from app.models.user import UserModel
+        from app.models.incident import Incident
+        from app.utils import create_notification
+        import datetime
+
+        firefighter = Firefighter.query.filter_by(name=session.get('user_name')).first()
+        if not firefighter:
+            return {'error': 'Firefighter profile not found'}, 404
+
+        incident_id = data.get('incident_id')
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        message = data.get('message', 'EMERGENCY! Firefighter needs immediate assistance!')
+
+        sos = SOSAlert(
+            firefighter_id=firefighter.id,
+            incident_id=incident_id,
+            latitude=latitude,
+            longitude=longitude,
+            message=message,
+            status='active'
+        )
+        db.session.add(sos)
+        db.session.commit()
+
+        users = UserModel.query.filter(UserModel.role.in_(['dispatcher', 'commander'])).all()
+        for user in users:
+            create_notification(
+                user_id=user.id,
+                title=f'🚨 MAYDAY! SOS Alert from {firefighter.name}',
+                message=f'{message}\nLocation: {latitude}, {longitude}' if latitude else message,
+                incident_id=incident_id
+            )
+
+        if incident_id:
+            incident = Incident.query.get(incident_id)
+            if incident and incident.assigned_vehicle:
+                for ff in incident.assigned_vehicle.firefighters:
+                    user = UserModel.query.filter_by(username=ff.name).first()
+                    if user and user.id != session.get('user_id'):
+                        create_notification(
+                            user_id=user.id,
+                            title=f'🚨 SOS ALERT!',
+                            message=f'Firefighter {firefighter.name} needs immediate assistance at incident #{incident.id}',
+                            incident_id=incident_id
+                        )
+
+        return {
+            'success': True,
+            'sos_id': sos.id,
+            'message': 'SOS alert sent! Help is on the way.'
+        }
+
+    except Exception as e:
+        print(f"SOS Error: {e}")
+        return {'error': str(e)}, 500
+
+
+@communications_bp.route('/staff/sos/<int:sos_id>/resolve', methods=['POST'])
+@login_required
+@role_required('dispatcher', 'commander')
+def resolve_sos(sos_id):
+    """Resolve an SOS alert"""
+    from app.models.communication import SOSAlert
+    sos = SOSAlert.query.get_or_404(sos_id)
+
+    if sos.status != 'active':
+        return {'error': 'SOS already resolved'}, 400
+
+    sos.status = 'resolved'
+    sos.resolved_at = datetime.datetime.utcnow()
+    sos.resolved_by = session.get('user_id')
+    db.session.commit()
+
+    # Notify the firefighter that SOS was resolved
+    user = UserModel.query.filter_by(username=sos.firefighter.name).first()
+    if user:
+        create_notification(
+            user_id=user.id,
+            title='✅ SOS Alert Resolved',
+            message='Your SOS alert has been acknowledged. Help is on scene.',
+            incident_id=sos.incident_id
+        )
+
+    return {'success': True, 'message': 'SOS alert resolved'}
+
+
+@communications_bp.route('/staff/sos/active')
+@login_required
+def get_active_sos():
+    """Get all active SOS alerts"""
+    from app.models.communication import SOSAlert
+    active_sos = SOSAlert.query.filter_by(status='active').all()
+
+    result = []
+    for sos in active_sos:
+        result.append({
+            'id': sos.id,
+            'firefighter': sos.firefighter.name,
+            'incident_id': sos.incident_id,
+            'latitude': sos.latitude,
+            'longitude': sos.longitude,
+            'message': sos.message,
+            'created_at': sos.created_at.isoformat()
+        })
+
+    return {'sos_alerts': result}

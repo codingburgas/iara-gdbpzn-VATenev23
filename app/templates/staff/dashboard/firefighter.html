@@ -1,40 +1,358 @@
 {% extends "staff/base.html" %}
 
 {% block content %}
-<div class="row mb-4"><div class="col-12"><h2>🚒 Firefighter Dashboard</h2><hr></div></div>
-{% if incidents %}<div class="alert alert-warning"><strong>🚨 NEW DISPATCH!</strong> You have been assigned to {{ incidents|length }} incident(s).</div>{% endif %}
 <div class="row mb-4">
-    <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h6>My Status</h6><h3>{% if firefighter %}<span class="badge {% if firefighter.status == 'available' %}bg-success{% else %}bg-warning{% endif %} fs-5">{{ firefighter.status }}</span>{% else %}<span class="badge bg-secondary">Unknown</span>{% endif %}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body"><h6>Assigned Incidents</h6><h3>{{ incidents|length }}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-info"><div class="card-body"><h6>My Vehicle</h6><h5>{% if firefighter and firefighter.assigned_vehicle %}{{ firefighter.assigned_vehicle.type|truncate(20) }}{% else %}Not assigned{% endif %}</h5></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-warning"><div class="card-body"><h6>Current Shift</h6><h5>{% if firefighter and firefighter.current_shift %}Active{% else %}Not started{% endif %}</h5></div></div></div>
+    <div class="col-12">
+        <h2>🚒 Firefighter Dashboard</h2>
+        <hr>
+    </div>
 </div>
+
+<!-- Notification for new incidents -->
+{% if incidents %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <strong>🚨 NEW DISPATCH!</strong> You have been assigned to {{ incidents|length }} incident(s).
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Quick Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>My Status</h6>
+                <h3>
+                    {% if firefighter %}
+                        <span class="badge {% if firefighter.status == 'available' %}bg-success{% else %}bg-warning{% endif %} fs-5">
+                            {{ firefighter.status }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">Unknown</span>
+                    {% endif %}
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6>Assigned Incidents</h6>
+                <h3>{{ incidents|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6>My Vehicle</h6>
+                <h5>
+                    {% if firefighter and firefighter.assigned_vehicle %}
+                        {{ firefighter.assigned_vehicle.type|truncate(20) }}
+                    {% else %}
+                        Not assigned
+                    {% endif %}
+                </h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h6>Current Shift</h6>
+                <h5>
+                    {% if firefighter and firefighter.current_shift %}
+                        Active
+                    {% else %}
+                        Not started
+                    {% endif %}
+                </h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
 <div class="row">
+    <!-- Left Column - Status & Quick Actions -->
     <div class="col-md-4">
-        <div class="card mb-3"><div class="card-header bg-danger text-white"><h5 class="mb-0">My Information</h5></div><div class="card-body">
-            {% if firefighter %}
-            <table class="table table-sm"><tr><th>Name:</th><td>{{ firefighter.name }}</td></tr><tr><th>Rank:</th><td>{{ firefighter.rank }}</td></tr><tr><th>Employee ID:</th><td>{{ firefighter.employee_id or 'Not set' }}</td></tr><tr><th>Phone:</th><td>{{ firefighter.phone or 'Not set' }}</td></tr><tr><th>Hire Date:</th><td>{{ firefighter.hire_date.strftime('%d/%m/%Y') if firefighter.hire_date else 'Not set' }}</td></tr></table>
-            {% else %}<div class="alert alert-warning"><p>⚠️ Your firefighter profile is not set up.</p><small>Please contact a commander to assign you to a vehicle.</small></div>{% endif %}
-        </div></div>
-        <div class="card mb-3"><div class="card-header bg-dark text-white"><h5 class="mb-0">Quick Actions</h5></div><div class="card-body"><div class="d-grid gap-2"><button class="btn btn-success" onclick="updateStatus('available')">✅ Available</button><button class="btn btn-warning" onclick="updateStatus('on_break')">⏱️ On Break</button><button class="btn btn-danger" onclick="sosAlert()">🚨 Emergency SOS</button><hr><a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-primary">🗺️ View Map</a></div></div></div>
+        <!-- Status Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">My Information</h5>
+            </div>
+            <div class="card-body">
+                {% if firefighter %}
+                <table class="table table-sm">
+                     <tr>
+                        <th>Name:</th>
+                        <td>{{ firefighter.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Rank:</th>
+                        <td>{{ firefighter.rank }}</td>
+                    </tr>
+                    <tr>
+                        <th>Employee ID:</th>
+                        <td>{{ firefighter.employee_id or 'Not set' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Phone:</th>
+                        <td>{{ firefighter.phone or 'Not set' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Hire Date:</th>
+                        <td>{{ firefighter.hire_date.strftime('%d/%m/%Y') if firefighter.hire_date else 'Not set' }}</td>
+                    </tr>
+                </table>
+                {% else %}
+                <div class="alert alert-warning">
+                    <p class="mb-0">⚠️ Your firefighter profile is not set up.</p>
+                    <small>Please contact a commander to assign you to a vehicle.</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" onclick="updateStatus('available')">✅ Available</button>
+                    <button class="btn btn-warning" onclick="updateStatus('on_break')">⏱️ On Break</button>
+
+                    <!-- SOS BUTTON -->
+                    <button class="btn btn-danger" onclick="sendSOS()" id="sosButton">
+                        🚨 EMERGENCY SOS 🚨
+                    </button>
+
+                    <hr>
+                    <a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-primary">🗺️ View Map</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Equipment Card (placeholder) -->
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">My Vehicle Equipment</h5>
+            </div>
+            <div class="card-body">
+                {% if firefighter and firefighter.assigned_vehicle %}
+                    <p class="text-muted">Equipment tracking coming soon...</p>
+                    <ul class="list-unstyled">
+                        <li>🔧 Basic tools</li>
+                        <li>📏 Hoses</li>
+                        <li>🧯 Extinguishers</li>
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No vehicle assigned</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
+
+    <!-- Right Column - Assigned Incidents -->
     <div class="col-md-8">
-        <div class="card"><div class="card-header bg-dark text-white"><h5 class="mb-0">My Assigned Incidents</h5></div><div class="card-body">
-            {% if incidents %}
-            <div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>Type</th><th>Title</th><th>Location</th><th>Status</th><th>Reported</th><th>Actions</th></tr></thead>
-            <tbody>{% for incident in incidents %}<tr><td>#{{ incident.id }}</td><td><span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">{{ incident.incident_type }}</span></td><td>{{ incident.title|truncate(20) }}</td><td>{{ incident.location|truncate(20) }}</td><td><span class="badge bg-{% if incident.status == 'Reported' %}primary{% elif incident.status == 'Dispatched' %}info{% elif incident.status == 'On Scene' %}warning{% else %}secondary{% endif %}">{{ incident.status }}</span></td><td>{{ incident.reported_at.strftime('%H:%M') }}</td><td><a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary">👁️</a><button class="btn btn-sm btn-outline-success" onclick="updateIncidentStatus({{ incident.id }}, 'Dispatched')">🚒</button><button class="btn btn-sm btn-outline-warning" onclick="updateIncidentStatus({{ incident.id }}, 'On Scene')">🔥</button></td></tr>{% endfor %}</tbody></table></div>
-            {% else %}<div class="text-center py-5"><p class="text-muted">No incidents assigned to you.</p><p class="text-muted">You're currently available for dispatch.</p></div>{% endif %}
-        </div></div>
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">My Assigned Incidents</h5>
+            </div>
+            <div class="card-body">
+                {% if incidents %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                             <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Title</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>Reported</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for incident in incidents %}
+                            <tr>
+                                <td>#{{ incident.id }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if incident.incident_type == 'fire' %}bg-danger
+                                        {% elif incident.incident_type == 'rescue' %}bg-success
+                                        {% elif incident.incident_type == 'accident' %}bg-warning
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ incident.incident_type }}
+                                    </span>
+                                </td>
+                                <td>{{ incident.title|truncate(20) }}</td>
+                                <td>{{ incident.location|truncate(20) }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if incident.status == 'Reported' %}bg-primary
+                                        {% elif incident.status == 'Dispatched' %}bg-info
+                                        {% elif incident.status == 'On Scene' %}bg-warning
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ incident.status }}
+                                    </span>
+                                </td>
+                                <td>{{ incident.reported_at.strftime('%H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}"
+                                           class="btn btn-outline-primary" title="View Details">
+                                            👁️
+                                        </a>
+                                        <button class="btn btn-outline-success" title="En Route"
+                                                onclick="updateIncidentStatus({{ incident.id }}, 'Dispatched')">
+                                            🚒
+                                        </button>
+                                        <button class="btn btn-outline-warning" title="On Scene"
+                                                onclick="updateIncidentStatus({{ incident.id }}, 'On Scene')">
+                                            🔥
+                                        </button>
+                                        <button class="btn btn-outline-secondary" title="Complete"
+                                                onclick="updateIncidentStatus({{ incident.id }}, 'Closed')">
+                                            ✅
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted mb-3">No incidents assigned to you.</p>
+                    <p class="text-muted">You're currently available for dispatch.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- JavaScript for actions -->
 <script>
-function updateStatus(status) { alert('Status update to ' + status + ' - Coming soon!'); }
-function sosAlert() { if(confirm('🚨 EMERGENCY SOS! Are you sure?')) alert('SOS signal sent to dispatch!'); }
+function updateStatus(status) {
+    // This would connect to your backend
+    alert('Status update to ' + status + ' - Backend integration coming soon!');
+}
+
 function updateIncidentStatus(incidentId, status) {
-    if(confirm(`Update incident #${incidentId} status to ${status}?`)) {
-        fetch(`/staff/incident/${incidentId}/quick-status`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})})
-        .then(r=>r.json()).then(d=>{if(d.success) location.reload(); else alert('Error');});
+    if (confirm(`Update incident #${incidentId} status to ${status}?`)) {
+        fetch(`/staff/incident/${incidentId}/quick-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({status: status})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating status');
+        });
     }
+}
+
+// SOS Function
+function sendSOS() {
+    console.log("SOS button clicked");  // <-- ADD THIS
+
+    if (confirm('🚨 WARNING! 🚨\n\nThis will send an EMERGENCY SOS signal to all dispatchers and nearby units. Only use in life-threatening situations.\n\nAre you absolutely sure?')) {
+
+        console.log("Confirmed, sending SOS...");  // <-- ADD THIS
+
+        // Disable button to prevent multiple clicks
+        var sosBtn = document.getElementById('sosButton');
+        sosBtn.disabled = true;
+        sosBtn.innerHTML = '🚨 SENDING SOS... 🚨';
+
+        // Get the first incident ID if available
+        var incidentId = null;
+        {% if incidents %}
+            incidentId = {{ incidents[0].id }};
+            console.log("Incident ID:", incidentId);  // <-- ADD THIS
+        {% endif %}
+
+        // Try to get current location if available
+        if (navigator.geolocation) {
+            console.log("Getting location...");  // <-- ADD THIS
+            navigator.geolocation.getCurrentPosition(function(position) {
+                console.log("Location obtained:", position.coords.latitude, position.coords.longitude);  // <-- ADD THIS
+                sendSOSRequest(position.coords.latitude, position.coords.longitude, incidentId);
+            }, function(error) {
+                console.warn('Geolocation error:', error);
+                sendSOSRequest(null, null, incidentId);
+            });
+        } else {
+            console.log("Geolocation not available");  // <-- ADD THIS
+            sendSOSRequest(null, null, incidentId);
+        }
+    } else {
+        console.log("SOS cancelled");  // <-- ADD THIS
+    }
+}
+
+function sendSOSRequest(lat, lng, incidentId) {
+    console.log("sendSOSRequest called with:", lat, lng, incidentId);  // <-- ADD THIS
+
+    var data = {
+        incident_id: incidentId,
+        message: 'MAYDAY! Firefighter needs immediate assistance!'
+    };
+
+    if (lat && lng) {
+        data.latitude = lat;
+        data.longitude = lng;
+    }
+
+    console.log("Sending POST to /staff/sos with data:", data);  // <-- ADD THIS
+
+    fetch('/staff/sos', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        console.log("Response status:", response.status);  // <-- ADD THIS
+        return response.json();
+    })
+    .then(data => {
+        console.log("Response data:", data);  // <-- ADD THIS
+        if (data.success) {
+            alert('🚨 SOS ALERT SENT! 🚨\n\nHelp is on the way. Stay calm and await assistance.');
+            var sosBtn = document.getElementById('sosButton');
+            sosBtn.style.backgroundColor = '#8B0000';
+            sosBtn.innerHTML = '🚨 SOS SENT - HELP INCOMING 🚨';
+            sosBtn.disabled = true;
+        } else {
+            alert('Error sending SOS: ' + (data.error || 'Unknown error'));
+            document.getElementById('sosButton').disabled = false;
+            document.getElementById('sosButton').innerHTML = '🚨 EMERGENCY SOS 🚨';
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);  // <-- ADD THIS
+        alert('Error sending SOS: ' + error.message);
+        document.getElementById('sosButton').disabled = false;
+        document.getElementById('sosButton').innerHTML = '🚨 EMERGENCY SOS 🚨';
+    });
 }
 </script>
 {% endblock %}
