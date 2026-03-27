@@ -1,0 +1,74 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h4>Staff Registration</h4>
+                <small>Only commanders can create new staff accounts</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="registerForm">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.username.label(class="form-label") }}
+                        {{ form.username(class="form-control") }}
+                        <small class="text-muted">Login username</small>
+                        {% if form.username.errors %}
+                            <div class="text-danger">{% for error in form.username.errors %}<small>{{ error }}</small>{% endfor %}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control") }}
+                        <small class="text-muted">Used for login</small>
+                        {% if form.email.errors %}
+                            <div class="text-danger">{% for error in form.email.errors %}<small>{{ error }}</small>{% endfor %}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control") }}
+                        {% if form.password.errors %}
+                            <div class="text-danger">{% for error in form.password.errors %}<small>{{ error }}</small>{% endfor %}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.role.label(class="form-label") }}
+                        {{ form.role(class="form-select", id="roleSelect") }}
+                    </div>
+                    <div id="firefighterFields" style="display: none;">
+                        <hr><h5>Firefighter Details</h5>
+                        <div class="mb-3">
+                            {{ form.full_name.label(class="form-label") }}
+                            {{ form.full_name(class="form-control") }}
+                            <small class="text-muted">Full name as it should appear in the system</small>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.rank.label(class="form-label") }}
+                            {{ form.rank(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.employee_id.label(class="form-label") }}
+                            {{ form.employee_id(class="form-control") }}
+                            <small class="text-muted">Official employee ID number</small>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.phone.label(class="form-label") }}
+                            {{ form.phone(class="form-control") }}
+                        </div>
+                    </div>
+                    {{ form.submit(class="btn btn-dark w-100 mt-3") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.getElementById('roleSelect').addEventListener('change', function() {
+        var ffFields = document.getElementById('firefighterFields');
+        ffFields.style.display = this.value === 'firefighter' ? 'block' : 'none';
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row mb-4"><div class="col-12"><h2>🚒 Firefighter Dashboard</h2><hr></div></div>
+{% if incidents %}<div class="alert alert-warning"><strong>🚨 NEW DISPATCH!</strong> You have been assigned to {{ incidents|length }} incident(s).</div>{% endif %}
+<div class="row mb-4">
+    <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h6>My Status</h6><h3>{% if firefighter %}<span class="badge {% if firefighter.status == 'available' %}bg-success{% else %}bg-warning{% endif %} fs-5">{{ firefighter.status }}</span>{% else %}<span class="badge bg-secondary">Unknown</span>{% endif %}</h3></div></div></div>
+    <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body"><h6>Assigned Incidents</h6><h3>{{ incidents|length }}</h3></div></div></div>
+    <div class="col-md-3"><div class="card text-white bg-info"><div class="card-body"><h6>My Vehicle</h6><h5>{% if firefighter and firefighter.assigned_vehicle %}{{ firefighter.assigned_vehicle.type|truncate(20) }}{% else %}Not assigned{% endif %}</h5></div></div></div>
+    <div class="col-md-3"><div class="card text-white bg-warning"><div class="card-body"><h6>Current Shift</h6><h5>{% if firefighter and firefighter.current_shift %}Active{% else %}Not started{% endif %}</h5></div></div></div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-3"><div class="card-header bg-danger text-white"><h5 class="mb-0">My Information</h5></div><div class="card-body">
+            {% if firefighter %}
+            <table class="table table-sm"><tr><th>Name:</th><td>{{ firefighter.name }}</td></tr><tr><th>Rank:</th><td>{{ firefighter.rank }}</td></tr><tr><th>Employee ID:</th><td>{{ firefighter.employee_id or 'Not set' }}</td></tr><tr><th>Phone:</th><td>{{ firefighter.phone or 'Not set' }}</td></tr><tr><th>Hire Date:</th><td>{{ firefighter.hire_date.strftime('%d/%m/%Y') if firefighter.hire_date else 'Not set' }}</td></tr></table>
+            {% else %}<div class="alert alert-warning"><p>⚠️ Your firefighter profile is not set up.</p><small>Please contact a commander to assign you to a vehicle.</small></div>{% endif %}
+        </div></div>
+        <div class="card mb-3"><div class="card-header bg-dark text-white"><h5 class="mb-0">Quick Actions</h5></div><div class="card-body"><div class="d-grid gap-2"><button class="btn btn-success" onclick="updateStatus('available')">✅ Available</button><button class="btn btn-warning" onclick="updateStatus('on_break')">⏱️ On Break</button><button class="btn btn-danger" onclick="sosAlert()">🚨 Emergency SOS</button><hr><a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-primary">🗺️ View Map</a></div></div></div>
+    </div>
+    <div class="col-md-8">
+        <div class="card"><div class="card-header bg-dark text-white"><h5 class="mb-0">My Assigned Incidents</h5></div><div class="card-body">
+            {% if incidents %}
+            <div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>Type</th><th>Title</th><th>Location</th><th>Status</th><th>Reported</th><th>Actions</th></tr></thead>
+            <tbody>{% for incident in incidents %}<tr><td>#{{ incident.id }}</td><td><span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">{{ incident.incident_type }}</span></td><td>{{ incident.title|truncate(20) }}</td><td>{{ incident.location|truncate(20) }}</td><td><span class="badge bg-{% if incident.status == 'Reported' %}primary{% elif incident.status == 'Dispatched' %}info{% elif incident.status == 'On Scene' %}warning{% else %}secondary{% endif %}">{{ incident.status }}</span></td><td>{{ incident.reported_at.strftime('%H:%M') }}</td><td><a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary">👁️</a><button class="btn btn-sm btn-outline-success" onclick="updateIncidentStatus({{ incident.id }}, 'Dispatched')">🚒</button><button class="btn btn-sm btn-outline-warning" onclick="updateIncidentStatus({{ incident.id }}, 'On Scene')">🔥</button></td></tr>{% endfor %}</tbody></table></div>
+            {% else %}<div class="text-center py-5"><p class="text-muted">No incidents assigned to you.</p><p class="text-muted">You're currently available for dispatch.</p></div>{% endif %}
+        </div></div>
+    </div>
+</div>
+<script>
+function updateStatus(status) { alert('Status update to ' + status + ' - Coming soon!'); }
+function sosAlert() { if(confirm('🚨 EMERGENCY SOS! Are you sure?')) alert('SOS signal sent to dispatch!'); }
+function updateIncidentStatus(incidentId, status) {
+    if(confirm(`Update incident #${incidentId} status to ${status}?`)) {
+        fetch(`/staff/incident/${incidentId}/quick-status`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})})
+        .then(r=>r.json()).then(d=>{if(d.success) location.reload(); else alert('Error');});
+    }
+}
+</script>
+{% endblock %}

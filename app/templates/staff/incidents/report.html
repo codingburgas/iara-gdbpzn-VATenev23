@@ -1,0 +1,36 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<h2>Report New Incident</h2>
+<hr>
+<div class="row">
+    <div class="col-md-6">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">{{ form.title.label(class="form-label") }}{{ form.title(class="form-control") }}</div>
+            <div class="mb-3">{{ form.location.label(class="form-label") }}{{ form.location(class="form-control") }}<small class="text-muted">Street address or intersection</small></div>
+            <div class="row">
+                <div class="col-md-6 mb-3">{{ form.latitude.label(class="form-label") }}{{ form.latitude(class="form-control", placeholder="e.g., 42.5063") }}<small class="text-muted">Optional - for map</small></div>
+                <div class="col-md-6 mb-3">{{ form.longitude.label(class="form-label") }}{{ form.longitude(class="form-control", placeholder="e.g., 27.4678") }}<small class="text-muted">Optional - for map</small></div>
+            </div>
+            <div class="mb-3">{{ form.incident_type.label(class="form-label") }}{{ form.incident_type(class="form-select") }}</div>
+            <div class="mb-3">{{ form.vehicle_id.label(class="form-label") }}{{ form.vehicle_id(class="form-select") }}<small class="text-muted">Select which vehicle to dispatch</small></div>
+            <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows=4) }}</div>
+            {{ form.submit(class="btn btn-danger") }}
+            <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3"><div class="card-header bg-dark text-white"><h5>📍 Available Units</h5></div><div class="card-body">
+            {% if vehicles %}{% for vehicle in vehicles %}
+            <div class="border-bottom mb-3 pb-3">
+                <div class="d-flex justify-content-between"><strong>{{ vehicle.type }}</strong><span class="badge bg-info">ID: {{ vehicle.id }}</span></div>
+                <p class="mb-1"><small>📍 {{ vehicle.location }}</small></p>
+                <p class="mb-1"><small><strong>Crew:</strong></small></p>
+                {% if vehicle.firefighters %}<ul class="list-unstyled ms-2">{% for f in vehicle.firefighters %}<li><small>• {{ f.name }} ({{ f.rank }})<span class="badge {% if f.status == 'available' %}bg-success{% else %}bg-warning{% endif %}">{{ f.status }}</span></small></li>{% endfor %}</ul>{% else %}<p class="text-muted ms-2"><small>No crew assigned</small></p>{% endif %}
+            </div>{% endfor %}{% else %}<p class="text-muted">No vehicles available. <a href="{{ url_for('personnel.import_data') }}">Import data first</a>.</p>{% endif %}
+        </div></div>
+        <div class="card"><div class="card-header bg-dark text-white"><h5>📍 Burgas Coordinates</h5></div><div class="card-body"><p><strong>City Center:</strong> 42.5063, 27.4678</p><p><strong>Central Station:</strong> 42.5132, 27.4628</p><p><strong>Industrial Zone:</strong> 42.4815, 27.4412</p><p><strong>Airport:</strong> 42.5697, 27.5152</p></div></div>
+    </div>
+</div>
+{% endblock %}

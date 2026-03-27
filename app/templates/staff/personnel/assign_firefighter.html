@@ -1,0 +1,14 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row"><div class="col-md-6 offset-md-3"><div class="card"><div class="card-header bg-dark text-white"><h4>Assign Firefighter to Vehicle</h4></div><div class="card-body">
+    <div class="mb-3"><h5>Firefighter: <span class="text-primary">{{ firefighter.name }}</span></h5><p class="text-muted">Rank: {{ firefighter.rank }}</p><p class="text-muted">Current Status: <span class="badge bg-{% if firefighter.status == 'available' %}success{% elif firefighter.status == 'on_duty' %}primary{% elif firefighter.status == 'vacation' %}warning{% else %}secondary{% endif %}">{{ firefighter.status }}</span></p><p class="text-muted">Current Vehicle: {% if firefighter.assigned_vehicle %}{{ firefighter.assigned_vehicle.type }}{% else %}<span class="text-warning">Not assigned</span>{% endif %}</p></div>
+    <hr>
+    <form method="POST" action="{{ url_for('personnel.assign_firefighter', firefighter_id=firefighter.id) }}">
+        <div class="mb-3"><label class="form-label">Select Vehicle</label><select name="vehicle_id" class="form-select"><option value="">-- Select Vehicle --</option>{% for vehicle in vehicles %}<option value="{{ vehicle.id }}" {% if firefighter.assigned_vehicle and firefighter.assigned_vehicle.id == vehicle.id %}selected{% endif %}>{{ vehicle.type }} - {{ vehicle.location }}{% if vehicle.firefighters %} (Crew: {{ vehicle.firefighters|length }} members){% endif %}</option>{% endfor %}<option value="">--- Unassign ---</option></select></div>
+        <div class="d-flex justify-content-between"><button type="submit" class="btn btn-primary">Assign to Vehicle</button><a href="{{ url_for('personnel.list_firefighters') }}" class="btn btn-secondary">Cancel</a></div>
+    </form>
+</div></div></div></div>
+
+<div class="row mt-4"><div class="col-md-6 offset-md-3"><div class="card"><div class="card-header bg-dark text-white"><h5>Vehicle Crew Information</h5></div><div class="card-body"><div class="row">{% for vehicle in vehicles %}<div class="col-md-6 mb-3"><div class="border rounded p-2"><h6>{{ vehicle.type }}</h6><small class="text-muted">{{ vehicle.location }}</small><hr class="my-1"><strong>Crew:</strong>{% if vehicle.firefighters %}<ul class="list-unstyled mb-0">{% for f in vehicle.firefighters %}<li><small>• {{ f.name }} ({{ f.rank }})</small></li>{% endfor %}</ul>{% else %}<p class="text-muted mb-0"><small>No crew assigned</small></p>{% endif %}</div></div>{% endfor %}</div></div></div></div></div>
+{% endblock %}

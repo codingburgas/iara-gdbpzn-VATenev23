@@ -1,0 +1,80 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Vehicle GPS Tracking</h2>
+    <div>
+        <button class="btn btn-primary" onclick="simulateMovement()">🚗 Simulate Movement</button>
+        <button class="btn btn-secondary" onclick="refreshMap()">🔄 Refresh</button>
+    </div>
+</div>
+
+<div id="map" style="height: 500px; width: 100%; border-radius: 8px; margin-bottom: 20px;"></div>
+
+<div class="card">
+    <div class="card-header bg-dark text-white"><h5 class="mb-0">Active Vehicles</h5></div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>{% for vehicle in vehicles %}…{% endfor %}
+                </thead>
+                <tbody id="vehicleTable">
+                    {% for vehicle in vehicles %}
+                    <tr data-vehicle-id="{{ vehicle.id }}">
+                        <td>#{{ vehicle.id }}</td>
+                        <td>{{ vehicle.type }}</td>
+                        <td>{% if vehicle.latitude and vehicle.longitude %}{{ vehicle.latitude|round(4) }}, {{ vehicle.longitude|round(4) }}{% else %}<span class="text-muted">Unknown</span>{% endif %}</td>
+                        <td><span class="badge bg-{% if vehicle.status == 'station' %}secondary{% elif vehicle.status == 'en_route' %}info{% elif vehicle.status == 'on_scene' %}warning{% elif vehicle.status == 'returning' %}success{% else %}dark{% endif %}">{{ vehicle.status|replace('_', ' ') }}</span></td>
+                        <td>{% if vehicle.last_updated %}{{ vehicle.last_updated.strftime('%H:%M:%S') }}{% else %}Never{% endif %}</td>
+                        <td>{% if vehicle.current_incident %}<a href="{{ url_for('incidents.detail', incident_id=vehicle.current_incident.id) }}">#{{ vehicle.current_incident.id }} - {{ vehicle.current_incident.title|truncate(20) }}</a>{% else %}<span class="text-muted">None</span>{% endif %}</td>
+                        <td><button class="btn btn-sm btn-outline-primary" onclick="updateLocation({{ vehicle.id }})">📍 Update</button><button class="btn btn-sm btn-outline-info" onclick="centerOnVehicle({{ vehicle.latitude or 42.5063 }}, {{ vehicle.longitude or 27.4678 }})">🎯 Center</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+var map, vehicleMarkers = {}, incidentMarkers = {};
+var vehiclesData = { {% for vehicle in vehicles %}{{ vehicle.id }}: {id:{{ vehicle.id }}, type:"{{ vehicle.type }}", status:"{{ vehicle.status }}", lat:{{ vehicle.latitude or 42.5063 }}, lng:{{ vehicle.longitude or 27.4678 }} }{% if not loop.last %},{% endif %}{% endfor %} };
+var incidentsData = { {% for incident in incidents %}{{ incident.id }}: {id:{{ incident.id }}, title:"{{ incident.title|replace('"', '\\"') }}", type:"{{ incident.incident_type }}", lat:{{ incident.latitude or 42.5063 }}, lng:{{ incident.longitude or 27.4678 }} }{% if not loop.last %},{% endif %}{% endfor %} };
+var center = [42.5063, 27.4678];
+
+function initMap() {
+    map = L.map('map').setView(center, 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    for (var id in vehiclesData) { var v = vehiclesData[id]; if (v.lat && v.lng) addVehicleMarker(v.id, v.lat, v.lng, v.type, v.status); }
+    for (var id in incidentsData) { var i = incidentsData[id]; if (i.lat && i.lng) addIncidentMarker(i.id, i.lat, i.lng, i.title, i.type); }
+}
+function addVehicleMarker(id, lat, lng, type, status) {
+    var color = status === 'station' ? 'gray' : status === 'en_route' ? 'blue' : status === 'on_scene' ? 'orange' : 'green';
+    var icon = L.divIcon({ className: 'custom-div-icon', html: `<div style="background-color: ${color}; width:20px;height:20px;border-radius:50%;border:2px solid white;"></div>`, iconSize: [20,20], iconAnchor: [10,10] });
+    var marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+    marker.bindPopup(`<b>🚒 ${type}</b><br>Status: ${status}<br><button onclick="updateLocation(${id})" class="btn btn-sm btn-primary">Update</button><button onclick="centerOnVehicle(${lat}, ${lng})" class="btn btn-sm btn-secondary">Center</button>`);
+    vehicleMarkers[id] = marker;
+}
+function addIncidentMarker(id, lat, lng, title, type) {
+    var color = type === 'fire' ? 'red' : type === 'rescue' ? 'green' : type === 'accident' ? 'yellow' : 'gray';
+    var icon = L.divIcon({ className: 'custom-div-icon', html: `<div style="background-color: ${color}; width:16px;height:16px;border-radius:50%;border:2px solid white;"></div>`, iconSize: [16,16], iconAnchor: [8,8] });
+    var marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+    marker.bindPopup(`<b>#${id} - ${title}</b><br>Type: ${type}<br><a href="/staff/incident/${id}" class="btn btn-sm btn-primary">View</a>`);
+    incidentMarkers[id] = marker;
+}
+function updateLocation(vehicleId) {
+    var lat = 42.5063 + (Math.random() - 0.5) * 0.1;
+    var lng = 27.4678 + (Math.random() - 0.5) * 0.1;
+    fetch(`/staff/vehicle/${vehicleId}/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latitude: lat, longitude: lng }) })
+        .then(r => r.json()).then(data => { if (data.success) location.reload(); });
+}
+function centerOnVehicle(lat, lng) { if (lat && lng) map.setView([lat, lng], 14); else alert('Location not available'); }
+function simulateMovement() { document.querySelectorAll('#vehicleTable tr').forEach(row => { var id = row.dataset.vehicleId; if (id) updateLocation(id); }); }
+function refreshMap() { location.reload(); }
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+<style>.custom-div-icon{background:transparent;border:none;}</style>
+{% endblock %}

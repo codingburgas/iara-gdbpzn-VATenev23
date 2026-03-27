@@ -1,0 +1,39 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Staff Portal</h2>
+        <hr>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <strong>Welcome to the Emergency Operations Portal.</strong> Your role ({{ session.user_role }}) determines what you can access.
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body text-center">
+            <h5>Incidents</h5><p>View and manage incidents</p>
+            <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-primary">Go</a>
+        </div></div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body text-center">
+            <h5>Resources</h5><p>View firefighters and vehicles</p>
+            <a href="{{ url_for('personnel.list_firefighters') }}" class="btn btn-primary">Go</a>
+        </div></div>
+    </div>
+    {% if session.user_role in ['dispatcher', 'commander'] %}
+    <div class="col-md-4 mb-3">
+        <div class="card"><div class="card-body text-center">
+            <h5>Report Incident</h5><p>Create new incident</p>
+            <a href="{{ url_for('incidents.report_incident') }}" class="btn btn-danger">Go</a>
+        </div></div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

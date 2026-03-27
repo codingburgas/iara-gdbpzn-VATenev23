@@ -1,0 +1,40 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Equipment Inventory</h2>
+    <div>
+        <a href="{{ url_for('equipment.import_equipment') }}" class="btn btn-info me-2">📦 Import Default Equipment</a>
+        <a href="{{ url_for('equipment.add_equipment') }}" class="btn btn-success">+ Add Equipment</a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h6>Total Equipment</h6><h3>{{ equipment|length }}</h3></div></div></div>
+    <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body"><h6>Available</h6><h3>{{ equipment|selectattr('status', 'equalto', 'available')|list|length }}</h3></div></div></div>
+    <div class="col-md-3"><div class="card text-white bg-warning"><div class="card-body"><h6>In Use</h6><h3>{{ equipment|selectattr('status', 'equalto', 'in_use')|list|length }}</h3></div></div></div>
+    <div class="col-md-3"><div class="card text-white bg-danger"><div class="card-body"><h6>Maintenance</h6><h3>{{ equipment|selectattr('status', 'in', ['maintenance', 'damaged'])|list|length }}</h3></div></div></div>
+</div>
+
+<div class="card mb-3"><div class="card-body"><div class="row"><div class="col-md-3"><select class="form-select" id="typeFilter"><option value="">All Types</option><option value="tool">🔧 Tools</option><option value="hose">📏 Hoses</option><option value="extinguisher">🧯 Extinguishers</option><option value="gear">🦺 Gear</option><option value="medical">🚑 Medical</option><option value="other">📦 Other</option></select></div><div class="col-md-3"><select class="form-select" id="statusFilter"><option value="">All Status</option><option value="available">✅ Available</option><option value="in_use">🔄 In Use</option><option value="maintenance">🔧 Maintenance</option><option value="damaged">⚠️ Damaged</option></select></div><div class="col-md-3"><select class="form-select" id="vehicleFilter"><option value="">All Vehicles</option><option value="none">Not Assigned</option>{% for v in vehicles %}<option value="{{ v.id }}">{{ v.type }}</option>{% endfor %}</select></div><div class="col-md-3"><input type="text" class="form-control" id="searchInput" placeholder="🔍 Search..."></div></div></div></div>
+
+<div class="card"><div class="card-body">
+    <table class="table table-hover"><thead class="table-dark"><tr><th>Name</th><th>Type</th><th>Status</th><th>Condition</th><th>Assigned To</th><th>Last Inspected</th><th>Actions</th></tr></thead>
+    <tbody id="equipmentTable">{% for e in equipment %}<tr class="equipment-row" data-type="{{ e.type }}" data-status="{{ e.status }}" data-vehicle="{{ e.vehicle_id or 'none' }}"><td>{{ e.name }}</td><td>{% if e.type == 'tool' %}🔧{% elif e.type == 'hose' %}📏{% elif e.type == 'extinguisher' %}🧯{% elif e.type == 'gear' %}🦺{% elif e.type == 'medical' %}🚑{% else %}📦{% endif %} {{ e.type|title }}</td><td><span class="badge bg-{% if e.status == 'available' %}success{% elif e.status == 'in_use' %}primary{% elif e.status == 'maintenance' %}warning{% else %}danger{% endif %}">{{ e.status }}</span></td><td><span class="badge bg-{% if e.condition == 'good' %}success{% elif e.condition == 'fair' %}info{% elif e.condition == 'poor' %}warning{% else %}danger{% endif %}">{{ e.condition }}</span></td><td>{% if e.vehicle %}{{ e.vehicle.type }}{% else %}<span class="text-muted">Not assigned</span>{% endif %}</td><td>{% if e.last_inspected %}{{ e.last_inspected.strftime('%d/%m/%Y') }}{% else %}Never{% endif %}</td><td><a href="{{ url_for('equipment.detail', equipment_id=e.id) }}" class="btn btn-sm btn-outline-primary">View</a>{% if e.status == 'available' %}<a href="{{ url_for('equipment.checkout', equipment_id=e.id) }}" class="btn btn-sm btn-outline-success">Check Out</a>{% endif %}</td></tr>{% endfor %}</tbody>
+    </table>
+</div></div>
+
+<script>
+function filterTable() {
+    var typeFilter = document.getElementById('typeFilter').value, statusFilter = document.getElementById('statusFilter').value, vehicleFilter = document.getElementById('vehicleFilter').value, searchText = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.equipment-row').forEach(row => {
+        var type = row.dataset.type, status = row.dataset.status, vehicle = row.dataset.vehicle, text = row.textContent.toLowerCase();
+        row.style.display = ( (!typeFilter || type === typeFilter) && (!statusFilter || status === statusFilter) && (!vehicleFilter || vehicle === vehicleFilter) && (!searchText || text.includes(searchText)) ) ? '' : 'none';
+    });
+}
+document.getElementById('typeFilter').addEventListener('change', filterTable);
+document.getElementById('statusFilter').addEventListener('change', filterTable);
+document.getElementById('vehicleFilter').addEventListener('change', filterTable);
+document.getElementById('searchInput').addEventListener('keyup', filterTable);
+</script>
+{% endblock %}

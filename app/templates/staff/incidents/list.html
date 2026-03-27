@@ -1,0 +1,134 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Incident Management</h2>
+    <a href="{{ url_for('incidents.report_incident') }}" class="btn btn-danger">+ New Incident</a>
+</div>
+<hr>
+
+<!-- Search and Filter Section -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">🔍 Search & Filter Incidents</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('incidents.list_incidents') }}">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" value="{{ search_query }}" placeholder="Title, location, description...">
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="Reported" {% if status_filter == 'Reported' %}selected{% endif %}>🚨 Reported</option>
+                        <option value="Dispatched" {% if status_filter == 'Dispatched' %}selected{% endif %}>🚒 Dispatched</option>
+                        <option value="On Scene" {% if status_filter == 'On Scene' %}selected{% endif %}>🔥 On Scene</option>
+                        <option value="Contained" {% if status_filter == 'Contained' %}selected{% endif %}>📦 Contained</option>
+                        <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>✅ Closed</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="fire" {% if type_filter == 'fire' %}selected{% endif %}>🔥 Fire</option>
+                        <option value="rescue" {% if type_filter == 'rescue' %}selected{% endif %}>🚑 Rescue</option>
+                        <option value="accident" {% if type_filter == 'accident' %}selected{% endif %}>🚗 Accident</option>
+                        <option value="hazmat" {% if type_filter == 'hazmat' %}selected{% endif %}>☣️ Hazmat</option>
+                        <option value="other" {% if type_filter == 'other' %}selected{% endif %}>📦 Other</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-secondary">Clear Filters</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="mb-3"><strong>{{ incidents|length }}</strong> incidents found</div>
+
+<table class="table table-striped table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th><th>Title</th><th>Location</th><th>Type</th><th>Status</th><th>Assigned Vehicle</th><th>Time</th><th>Actions</th>
+        </thead>
+    <tbody>
+        {% for incident in incidents %}
+        <tr>
+            <td>#{{ incident.id }}</td>
+            <td>{{ incident.title }}</td>
+            <td>{{ incident.location }}</td>
+            <td><span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">{{ incident.incident_type }}</span></td>
+            <td>
+                <select class="form-select form-select-sm quick-status" data-incident="{{ incident.id }}" style="width: auto; min-width: 100px;">
+                    <option value="Reported" {% if incident.status == 'Reported' %}selected{% endif %}>🚨 Reported</option>
+                    <option value="Dispatched" {% if incident.status == 'Dispatched' %}selected{% endif %}>🚒 Dispatched</option>
+                    <option value="On Scene" {% if incident.status == 'On Scene' %}selected{% endif %}>🔥 On Scene</option>
+                    <option value="Contained" {% if incident.status == 'Contained' %}selected{% endif %}>📦 Contained</option>
+                    <option value="Closed" {% if incident.status == 'Closed' %}selected{% endif %}>✅ Closed</option>
+                </select>
+            </td>
+            <td>{% if incident.assigned_vehicle %}{{ incident.assigned_vehicle.type }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
+            <td>{{ incident.reported_at.strftime('%H:%M %d/%m') }}</td>
+            <td><a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+document.querySelectorAll('.quick-status').forEach(function(select) {
+    select.addEventListener('change', function() {
+        var incidentId = this.dataset.incident;
+        var newStatus = this.value;
+        var originalValue = this.getAttribute('data-original') || this.value;
+        this.disabled = true;
+        this.style.opacity = '0.5';
+        fetch('/staff/incident/' + incidentId + '/quick-status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: newStatus})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.style.borderColor = '#28a745';
+                this.setAttribute('data-original', newStatus);
+                if (typeof updateNotificationCount === 'function') updateNotificationCount();
+            } else {
+                this.value = originalValue;
+                this.style.borderColor = '#dc3545';
+                alert('Error updating status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            this.value = originalValue;
+            this.style.borderColor = '#dc3545';
+            alert('Error updating status');
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.style.opacity = '1';
+            setTimeout(() => { this.style.borderColor = ''; }, 2000);
+        });
+    });
+    select.setAttribute('data-original', select.value);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row"><div class="col-12"><div class="card"><div class="card-header bg-dark text-white"><h4>Enroll Volunteers for: {{ training.title }}</h4><p class="mb-0 text-muted">{{ training.date.strftime('%A, %d %B %Y at %H:%M') }} at {{ training.location }}</p></div><div class="card-body">
+    <div class="row"><div class="col-md-6"><h5>Approved Volunteers</h5><div class="list-group">{% for volunteer in volunteers %}<div class="list-group-item d-flex justify-content-between align-items-center"><div><strong>{{ volunteer.full_name }}</strong><br><small class="text-muted">{{ volunteer.email }} | {{ volunteer.phone }}</small></div><button class="btn btn-sm btn-success" onclick="enroll({{ volunteer.id }}, {{ training.id }})">Enroll</button></div>{% else %}<p class="text-muted">No approved volunteers yet.</p>{% endfor %}</div></div>
+    <div class="col-md-6"><h5>Enrolled Participants</h5><div class="list-group" id="enrolledList">{% if training.participants %}{% for p in training.participants %}<div class="list-group-item"><strong>{% if p.volunteer %}{{ p.volunteer.full_name }}{% else %}Firefighter{% endif %}</strong><span class="badge bg-info float-end">{{ p.status }}</span></div>{% endfor %}{% else %}<p class="text-muted">No participants enrolled yet.</p>{% endif %}</div></div></div>
+    <hr><div class="text-center"><a href="{{ url_for('volunteers.trainings_list') }}" class="btn btn-secondary">Back to Trainings</a></div>
+</div></div></div></div>
+
+<script>
+function enroll(volunteerId, trainingId) { alert('Enrollment feature coming soon!'); }
+</script>
+{% endblock %}
