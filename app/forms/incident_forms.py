@@ -53,3 +53,44 @@ class TaskStatusForm(FlaskForm):
                         validators=[DataRequired()])
     notes = TextAreaField('Completion Notes', validators=[Optional()])
     submit = SubmitField('Update Status')
+
+class MapAnnotationForm(FlaskForm):
+    annotation_type = SelectField('Annotation Type',
+                                  choices=[('fire_front', '🔥 Fire Front'),
+                                           ('wind', '💨 Wind Direction'),
+                                           ('perimeter', '📏 Perimeter'),
+                                           ('hotspot', '⚠️ Hotspot')],
+                                  validators=[DataRequired()])
+    color = StringField('Color', validators=[Optional()])
+    description = TextAreaField('Description', validators=[Optional()])
+    submit = SubmitField('Save Annotation')
+
+class ResourceRequestForm(FlaskForm):
+    resource_type = SelectField('Resource Type',
+                                choices=[('water', '💧 Water'),
+                                         ('fuel', '⛽ Fuel'),
+                                         ('equipment', '🔧 Equipment'),
+                                         ('personnel', '👥 Personnel'),
+                                         ('medical', '🚑 Medical Supplies'),
+                                         ('other', '📦 Other')],
+                                validators=[DataRequired()])
+    quantity = StringField('Quantity', validators=[Optional()])
+    description = TextAreaField('Description', validators=[DataRequired()])
+    priority = SelectField('Priority',
+                          choices=[('low', '🟢 Low'),
+                                   ('normal', '🔵 Normal'),
+                                   ('high', '🟠 High'),
+                                   ('urgent', '🔴 Urgent')],
+                          validators=[DataRequired()])
+    submit = SubmitField('Submit Request')
+
+
+class ResourceRequestResponseForm(FlaskForm):
+    status = SelectField('Status',
+                        choices=[('pending', '⏳ Pending'),
+                                 ('approved', '✅ Approved'),
+                                 ('fulfilled', '📦 Fulfilled'),
+                                 ('rejected', '❌ Rejected')],
+                        validators=[DataRequired()])
+    notes = TextAreaField('Notes', validators=[Optional()])
+    submit = SubmitField('Update Request')

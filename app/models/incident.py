@@ -29,6 +29,9 @@ class Incident(db.Model):
     reporter = db.relationship('UserModel', foreign_keys=[reported_by], backref='reported_incidents')
     updater = db.relationship('UserModel', foreign_keys=[updated_by], backref='updated_incidents')
 
+    wind_direction = db.Column(db.Integer, nullable=True)  # degrees (0-360)
+    wind_speed = db.Column(db.Float, nullable=True)  # km/h
+
 
 class StatusUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)

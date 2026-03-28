@@ -1,0 +1,281 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Incident #{{ incident.id }} Map - {{ incident.title }}</h2>
+    <div>
+        <a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-secondary btn-sm">← All Incidents Map</a>
+        <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary btn-sm">📋 Incident Details</a>
+    </div>
+</div>
+
+<!-- Drawing Tools Panel -->
+<div class="card mb-3">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">✏️ Map Drawing Tools</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="btn-group-vertical w-100">
+                    <button class="btn btn-outline-danger" id="drawFireFrontBtn">🔥 Draw Fire Front</button>
+                    <button class="btn btn-outline-info" id="drawWindBtn">💨 Draw Wind Direction</button>
+                    <button class="btn btn-outline-warning" id="drawPerimeterBtn">📏 Draw Perimeter</button>
+                    <button class="btn btn-outline-secondary" id="clearDrawingBtn">🗑️ Clear Drawing</button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-2">
+                    <label class="form-label">Color</label>
+                    <input type="color" id="drawColor" class="form-control" value="#ff0000">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-2">
+                    <label class="form-label">Wind Direction (degrees)</label>
+                    <input type="range" id="windDirection" min="0" max="360" step="1" class="form-range" value="0">
+                    <span id="windDegrees" class="badge bg-info">0°</span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Wind Speed (km/h)</label>
+                    <input type="number" id="windSpeed" class="form-control" value="0" step="5">
+                </div>
+                <button class="btn btn-primary" id="saveWindBtn">💨 Save Wind Data</button>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-2">
+                    <label class="form-label">Annotation Description</label>
+                    <textarea id="annotationDesc" class="form-control" rows="2" placeholder="Add description..."></textarea>
+                </div>
+                <button class="btn btn-success w-100" id="saveAnnotationBtn">💾 Save Annotation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map -->
+<div id="map" style="height: 500px; width: 100%; border-radius: 8px;"></div>
+
+<!-- Annotations List -->
+<div class="card mt-3">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">📌 Active Annotations</h5>
+    </div>
+    <div class="card-body">
+        <div id="annotationsList" class="row">
+            <p class="text-muted">No annotations yet. Draw on the map to add annotations.</p>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script>
+    var map;
+    var drawnItems;
+    var currentDrawType = null;
+    var currentDrawingLayer = null;
+    var incidentCenter = [{{ incident.latitude or 42.5063 }}, {{ incident.longitude or 27.4678 }}];
+    
+    function initMap() {
+        map = L.map('map').setView(incidentCenter, 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        L.marker(incidentCenter).addTo(map)
+            .bindPopup(`<b>Incident #{{ incident.id }}</b><br>{{ incident.location }}`)
+            .openPopup();
+        
+        drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        loadAnnotations();
+        setupDrawHandlers();
+    }
+    
+    function setupDrawHandlers() {
+        document.getElementById('drawFireFrontBtn').onclick = function() {
+            currentDrawType = 'fire_front';
+            new L.Draw.Polygon(map, {
+                shapeOptions: { color: document.getElementById('drawColor').value, weight: 4 }
+            }).enable();
+            alert('Click on map to draw fire front. Double-click to finish.');
+        };
+        
+        document.getElementById('drawWindBtn').onclick = function() {
+            currentDrawType = 'wind';
+            new L.Draw.Polyline(map, {
+                shapeOptions: { color: document.getElementById('drawColor').value, weight: 4, dashArray: '5, 10' }
+            }).enable();
+            alert('Draw a line showing wind direction. Double-click to finish.');
+        };
+        
+        document.getElementById('drawPerimeterBtn').onclick = function() {
+            currentDrawType = 'perimeter';
+            new L.Draw.Polygon(map, {
+                shapeOptions: { color: document.getElementById('drawColor').value, weight: 3, fillOpacity: 0.2 }
+            }).enable();
+            alert('Draw perimeter polygon. Double-click to finish.');
+        };
+        
+        document.getElementById('clearDrawingBtn').onclick = function() {
+            if (currentDrawingLayer) {
+                drawnItems.removeLayer(currentDrawingLayer);
+                currentDrawingLayer = null;
+            }
+        };
+        
+        document.getElementById('saveAnnotationBtn').onclick = saveCurrentDrawing;
+        
+        document.getElementById('windDirection').oninput = function() {
+            document.getElementById('windDegrees').textContent = this.value + '°';
+        };
+        
+        document.getElementById('saveWindBtn').onclick = saveWindData;
+        
+        map.on('draw:created', function(e) {
+            currentDrawingLayer = e.layer;
+            drawnItems.addLayer(currentDrawingLayer);
+            alert('Drawing complete. Click "Save Annotation" to save.');
+        });
+    }
+    
+    function saveCurrentDrawing() {
+        if (!currentDrawingLayer) {
+            alert('Draw something on the map first!');
+            return;
+        }
+        
+        var geometry = currentDrawingLayer.toGeoJSON();
+        var type = currentDrawType;
+        var color = document.getElementById('drawColor').value;
+        var description = document.getElementById('annotationDesc').value;
+        
+        if (!type) {
+            alert('Select an annotation type first!');
+            return;
+        }
+        
+        fetch(`/staff/map/annotations/{{ incident.id }}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: type,
+                geometry: geometry.geometry,
+                color: color,
+                description: description
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Annotation saved!');
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
+    function loadAnnotations() {
+        fetch(`/staff/map/annotations/{{ incident.id }}`)
+            .then(response => response.json())
+            .then(data => {
+                renderAnnotations(data);
+                renderAnnotationsList(data);
+            });
+    }
+    
+    function renderAnnotations(annotations) {
+        annotations.forEach(function(ann) {
+            var layer;
+            var coords = ann.geometry.coordinates;
+            
+            if (ann.type === 'fire_front' || ann.type === 'perimeter') {
+                var latlngs = coords[0].map(function(coord) {
+                    return [coord[1], coord[0]];
+                });
+                layer = L.polygon(latlngs, {
+                    color: ann.color,
+                    weight: 3,
+                    fillOpacity: ann.type === 'fire_front' ? 0.4 : 0.2
+                });
+            } else if (ann.type === 'wind') {
+                var latlngs = coords.map(function(coord) {
+                    return [coord[1], coord[0]];
+                });
+                layer = L.polyline(latlngs, {
+                    color: ann.color,
+                    weight: 4,
+                    dashArray: '5, 10'
+                });
+                var lastPoint = latlngs[latlngs.length - 1];
+                L.marker(lastPoint, {
+                    icon: L.divIcon({ className: 'wind-arrow', html: '➡️', iconSize: [20, 20] })
+                }).addTo(map);
+            }
+            
+            if (layer) {
+                layer.bindPopup(`
+                    <b>${ann.type.replace('_', ' ').toUpperCase()}</b><br>
+                    <small>Added by: ${ann.user}</small><br>
+                    ${ann.description ? `<p>${ann.description}</p>` : ''}
+                    <button onclick="deleteAnnotation(${ann.id})" class="btn btn-sm btn-danger">Delete</button>
+                `);
+                layer.addTo(map);
+            }
+        });
+    }
+    
+    function renderAnnotationsList(annotations) {
+        var container = document.getElementById('annotationsList');
+        if (annotations.length === 0) {
+            container.innerHTML = '<p class="text-muted">No annotations yet. Draw on the map to add annotations.</p>';
+            return;
+        }
+        
+        var html = '<div class="row">';
+        annotations.forEach(function(ann) {
+            html += `
+                <div class="col-md-4 mb-2">
+                    <div class="card" style="border-left: 4px solid ${ann.color}">
+                        <div class="card-body p-2">
+                            <strong>${ann.type.replace('_', ' ').toUpperCase()}</strong>
+                            <small class="text-muted"> by ${ann.user}</small>
+                            <p class="small mb-0">${ann.description || 'No description'}</p>
+                            <button onclick="deleteAnnotation(${ann.id})" class="btn btn-sm btn-outline-danger mt-1">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    function deleteAnnotation(annotationId) {
+        if (confirm('Delete this annotation?')) {
+            fetch(`/staff/map/annotations/${annotationId}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => { if (data.success) location.reload(); });
+        }
+    }
+    
+    function saveWindData() {
+        fetch('/staff/map/wind-direction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                incident_id: {{ incident.id }},
+                direction: document.getElementById('windDirection').value,
+                speed: document.getElementById('windSpeed').value
+            })
+        }).then(() => alert('Wind data saved!'));
+    }
+    
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

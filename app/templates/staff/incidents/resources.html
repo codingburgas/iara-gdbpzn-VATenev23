@@ -1,0 +1,150 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Resource Requests - Incident #{{ incident.id }}</h2>
+    <div>
+        <a href="{{ url_for('incidents.request_resource', incident_id=incident.id) }}" class="btn btn-success">
+            + Request Resource
+        </a>
+        <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary">
+            ← Back to Incident
+        </a>
+    </div>
+</div>
+<hr>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h6>Total Requests</h6>
+                <h3>{{ requests|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h6>Pending</h6>
+                <h3>{{ requests|selectattr('status', 'equalto', 'pending')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6>Fulfilled</h6>
+                <h3>{{ requests|selectattr('status', 'equalto', 'fulfilled')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6>Approved</h6>
+                <h3>{{ requests|selectattr('status', 'equalto', 'approved')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">📦 Resource Requests</h5>
+    </div>
+    <div class="card-body">
+        {% if requests %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Priority</th>
+                        <th>Description</th>
+                        <th>Requested By</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr class="{% if req.priority == 'urgent' %}table-danger{% endif %}">
+                        <td>#{{ req.id }}</td>
+                        <td>{{ req.resource_type }}</td>
+                        <td>{{ req.quantity or 'N/A' }}</td>
+                        <td>
+                            <span class="badge bg-{% if req.priority == 'urgent' %}danger
+                                                   {% elif req.priority == 'high' %}warning
+                                                   {% elif req.priority == 'normal' %}info
+                                                   {% else %}secondary{% endif %}">
+                                {{ req.priority }}
+                            </span>
+                        </td>
+                        <td>{{ req.description|truncate(50) }}</td>
+                        <td>{{ req.requester.username }}</td>
+                        <td>
+                            <span class="badge bg-{% if req.status == 'pending' %}warning
+                                                   {% elif req.status == 'approved' %}info
+                                                   {% elif req.status == 'fulfilled' %}success
+                                                   {% else %}secondary{% endif %}">
+                                {{ req.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if session.user_role in ['commander', 'dispatcher'] and req.status != 'fulfilled' %}
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#updateModal{{ req.id }}">
+                                Update
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    
+                    <!-- Update Modal -->
+                    {% if session.user_role in ['commander', 'dispatcher'] %}
+                    <div class="modal fade" id="updateModal{{ req.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-dark text-white">
+                                    <h5 class="modal-title">Update Request #{{ req.id }}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{{ url_for('incidents.update_resource_request', request_id=req.id) }}">
+                                    <div class="modal-body">
+                                        <p><strong>Request:</strong> {{ req.description }}</p>
+                                        <div class="mb-3">
+                                            <label class="form-label">Status</label>
+                                            <select name="status" class="form-select">
+                                                <option value="pending" {% if req.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
+                                                <option value="approved" {% if req.status == 'approved' %}selected{% endif %}>✅ Approved</option>
+                                                <option value="fulfilled" {% if req.status == 'fulfilled' %}selected{% endif %}>📦 Fulfilled</option>
+                                                <option value="rejected" {% if req.status == 'rejected' %}selected{% endif %}>❌ Rejected</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Notes</label>
+                                            <textarea name="notes" class="form-control" rows="2">{{ req.notes }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary">Update</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No resource requests yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -427,3 +427,97 @@ def delete_task(task_id):
 
     flash(f'Task "{task.title}" deleted.', 'warning')
     return redirect(url_for('incidents.incident_tasks', incident_id=incident_id))
+
+
+# ========== RESOURCE REQUEST ROUTES ==========
+
+@incidents_bp.route('/staff/incident/<int:incident_id>/resources')
+@login_required
+def incident_resources(incident_id):
+    """View resource requests for an incident"""
+    from app.models.resource import ResourceRequest
+
+    incident = Incident.query.get_or_404(incident_id)
+    requests = ResourceRequest.query.filter_by(incident_id=incident_id).order_by(
+        ResourceRequest.created_at.desc()).all()
+
+    return render_template('staff/incidents/resources.html',
+                           incident=incident,
+                           requests=requests)
+
+
+@incidents_bp.route('/staff/incident/<int:incident_id>/resources/request', methods=['GET', 'POST'])
+@login_required
+def request_resource(incident_id):
+    """Create a new resource request"""
+    from app.models.resource import ResourceRequest
+    from app.forms.incident_forms import ResourceRequestForm
+
+    incident = Incident.query.get_or_404(incident_id)
+    form = ResourceRequestForm()
+
+    if form.validate_on_submit():
+        request = ResourceRequest(
+            incident_id=incident.id,
+            requester_id=session.get('user_id'),
+            resource_type=form.resource_type.data,
+            quantity=form.quantity.data,
+            description=form.description.data,
+            priority=form.priority.data,
+            status='pending'
+        )
+        db.session.add(request)
+        db.session.commit()
+
+        # Notify commanders and dispatchers
+        users = UserModel.query.filter(UserModel.role.in_(['commander', 'dispatcher'])).all()
+        for user in users:
+            create_notification(
+                user_id=user.id,
+                title=f'📦 New Resource Request',
+                message=f'Request for {form.resource_type} at incident #{incident.id}',
+                incident_id=incident.id
+            )
+
+        flash(f'Resource request submitted!', 'success')
+        return redirect(url_for('incidents.incident_resources', incident_id=incident.id))
+
+    return render_template('staff/incidents/request_resource.html',
+                           incident=incident,
+                           form=form)
+
+
+@incidents_bp.route('/staff/resource/<int:request_id>/update', methods=['POST'])
+@login_required
+@role_required('commander', 'dispatcher')
+def update_resource_request(request_id):
+    """Update resource request status"""
+    from app.models.resource import ResourceRequest
+    from app.forms.incident_forms import ResourceRequestResponseForm
+
+    request = ResourceRequest.query.get_or_404(request_id)
+    form = ResourceRequestResponseForm()
+
+    if form.validate_on_submit():
+        old_status = request.status
+        request.status = form.status.data
+        request.notes = form.notes.data
+
+        if form.status.data == 'fulfilled' and not request.fulfilled_at:
+            request.fulfilled_at = datetime.datetime.utcnow()
+            request.fulfilled_by = session.get('user_id')
+
+        db.session.commit()
+
+        # Notify requester
+        create_notification(
+            user_id=request.requester_id,
+            title=f'📦 Resource Request Updated',
+            message=f'Your request for {request.resource_type} changed from {old_status} to {request.status}',
+            incident_id=request.incident_id
+        )
+
+        flash(f'Request #{request.id} updated to {request.status}', 'success')
+        return redirect(url_for('incidents.incident_resources', incident_id=request.incident_id))
+
+    return redirect(url_for('incidents.incident_resources', incident_id=request.incident_id))
