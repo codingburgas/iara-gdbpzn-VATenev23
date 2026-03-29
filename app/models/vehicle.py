@@ -14,6 +14,7 @@ class Vehicle(db.Model):
     speed = db.Column(db.Float, nullable=True)
     heading = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(20), default='station')
+    station_id = db.Column(db.Integer, db.ForeignKey('fire_station.id'), nullable=True)
     current_incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=True)
 
     # Relationships

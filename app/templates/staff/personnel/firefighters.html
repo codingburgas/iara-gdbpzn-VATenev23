@@ -22,13 +22,13 @@
 <div class="tab-content">
     <div class="tab-pane fade show active" id="firefighters">
         {% if firefighters %}
-        <table class="table table-striped"><thead><tr><th>Name</th><th>Rank</th><th>Status</th><th>Vehicle</th><th>Account</th><th>Actions</th></tr></thead>
-        <tbody>{% for f in firefighters %}<tr><td>{{ f.name }}</td><td>{{ f.rank }}</td><td><span class="badge bg-{% if f.status == 'available' %}success{% elif f.status == 'on_duty' %}primary{% elif f.status == 'vacation' %}warning{% elif f.status == 'sick' %}danger{% else %}secondary{% endif %}">{{ f.status }}</span></td><td>{% if f.assigned_vehicle %}{{ f.assigned_vehicle.type }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td><td>{% if f.user %}<span class="badge bg-success">✅ {{ f.user.username }}</span>{% else %}<span class="badge bg-warning">⚠️ No account</span>{% endif %}</td><td><a href="{{ url_for('personnel.assign_firefighter', firefighter_id=f.id) }}" class="btn btn-sm btn-outline-primary">Assign to Vehicle</a></td></tr>{% endfor %}</tbody>
+        <table class="table table-striped"><thead><tr><th>Name</th><th>Rank</th><th>Status</th><th>Station</th><th>Vehicle</th><th>Account</th><th>Actions</th></tr></thead>
+        <tbody>{% for f in firefighters %}<tr><td>{{ f.name }}</td><td>{{ f.rank }}</td><td><span class="badge bg-{% if f.status == 'available' %}success{% elif f.status == 'on_duty' %}primary{% elif f.status == 'vacation' %}warning{% elif f.status == 'sick' %}danger{% else %}secondary{% endif %}">{{ f.status }}</span></td><td>{{ f.station.name if f.station else 'Unassigned' }}</td><td>{% if f.assigned_vehicle %}{{ f.assigned_vehicle.type }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td><td>{% if f.user %}<span class="badge bg-success">✅ {{ f.user.username }}</span>{% else %}<span class="badge bg-warning">⚠️ No account</span>{% endif %}</td><td><a href="{{ url_for('personnel.assign_firefighter', firefighter_id=f.id) }}" class="btn btn-sm btn-outline-primary">Assign to Vehicle</a></td></tr>{% endfor %}</tbody>
         </table>{% else %}<p class="text-muted">No firefighters match your search.</p>{% endif %}
     </div>
     <div class="tab-pane fade" id="vehicles">
-        {% if vehicles %}<table class="table table-striped"><thead><tr><th>Type</th><th>Location</th><th>Crew</th></tr></thead>
-        <tbody>{% for v in vehicles %}<tr><td>{{ v.type }}</td><td>{{ v.location }}</td><td>{% if v.firefighters %}{% for f in v.firefighters %}<span class="badge bg-info">{{ f.name }}</span> {% endfor %}{% else %}<span class="text-muted">No crew</span>{% endif %}</td></tr>{% endfor %}</tbody>
+        {% if vehicles %}<table class="table table-striped"><thead><tr><th>Type</th><th>Station</th><th>Crew</th></tr></thead>
+        <tbody>{% for v in vehicles %}<tr><td>{{ v.type }}</td><td>{{ v.station.name if v.station else v.location }}</td><td>{% if v.firefighters %}{% for f in v.firefighters %}<span class="badge bg-info">{{ f.name }}</span> {% endfor %}{% else %}<span class="text-muted">No crew</span>{% endif %}</td></tr>{% endfor %}</tbody>
         </table>{% else %}<p class="text-muted">No vehicles match your search.</p>{% endif %}
     </div>
 </div>

@@ -4,7 +4,7 @@ from app.models.incident import Incident
 from app.models.user import UserModel
 from app.models.vehicle import Vehicle
 from app.models.firefighter import Firefighter
-from app.utils import login_required, role_required
+from app.utils import login_required, role_required, get_weather
 import datetime
 from sqlalchemy import extract
 
@@ -88,6 +88,9 @@ def firefighter_dashboard():
 @login_required
 @role_required('commander')
 def commander_dashboard():
+    # Burgas, Bulgaria coordinates
+    weather = get_weather(42.5048, 27.4626)
+
     fire_count = Incident.query.filter_by(incident_type='fire').count()
     rescue_count = Incident.query.filter_by(incident_type='rescue').count()
     accident_count = Incident.query.filter_by(incident_type='accident').count()
@@ -129,4 +132,4 @@ def commander_dashboard():
         'last_incident_time': last_incident_time
     }
 
-    return render_template('staff/dashboard/commander.html', stats=stats)
+    return render_template('staff/dashboard/commander.html', stats=stats, weather=weather)

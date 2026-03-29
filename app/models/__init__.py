@@ -1,4 +1,5 @@
 from app.models.user import UserModel
+from app.models.fire_station import FireStation
 from app.models.vehicle import Vehicle
 from app.models.firefighter import Firefighter
 from app.models.incident import Incident, StatusUpdate

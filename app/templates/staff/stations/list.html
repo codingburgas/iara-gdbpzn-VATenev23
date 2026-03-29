@@ -1,0 +1,62 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h2>Fire Stations</h2>
+    </div>
+    {% if session.user_role == 'commander' %}
+    <div class="col-auto">
+        <a href="{{ url_for('stations.add_station') }}" class="btn btn-primary">+ Add New Station</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Personnel</th>
+                        <th>Vehicles</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for station in stations %}
+                    <tr>
+                        <td><strong>{{ station.name }}</strong></td>
+                        <td>{{ station.address }}</td>
+                        <td>{{ station.personnel|length }} / {{ station.max_personnel }}</td>
+                        <td>{{ station.vehicles|length }} / {{ station.max_vehicles }}</td>
+                        <td>
+                            {% if station.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('stations.detail', station_id=station.id) }}" class="btn btn-outline-info">Details</a>
+                                {% if session.user_role == 'commander' %}
+                                <a href="{{ url_for('stations.edit_station', station_id=station.id) }}" class="btn btn-outline-primary">Edit</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No fire stations found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

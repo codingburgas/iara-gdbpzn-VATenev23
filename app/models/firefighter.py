@@ -8,6 +8,7 @@ class Firefighter(db.Model):
     rank = db.Column(db.String(50))
     status = db.Column(db.String(20), default='available')
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
+    station_id = db.Column(db.Integer, db.ForeignKey('fire_station.id'), nullable=True)
 
     # Link to User account
     user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=True, unique=True)

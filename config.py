@@ -9,6 +9,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///database.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Weather API config
+    WEATHER_API_KEY = os.environ.get('WEATHER_API_KEY') or '00000000000000000000000000000000'
+
     # Session config
     SESSION_PERMANENT = False
     SESSION_TYPE = 'filesystem'

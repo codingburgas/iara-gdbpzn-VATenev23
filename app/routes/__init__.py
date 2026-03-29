@@ -9,6 +9,7 @@ def register_blueprints(app):
     from app.routes.dashboard import dashboard_bp
     from app.routes.map import map_bp
     from app.routes.notifications import notifications_bp
+    from app.routes.stations import stations_bp
 
     app.register_blueprint(public_bp)
     app.register_blueprint(auth_bp)
@@ -20,3 +21,4 @@ def register_blueprints(app):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(map_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(stations_bp)

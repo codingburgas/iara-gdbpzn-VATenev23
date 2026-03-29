@@ -1,0 +1,108 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h2>{{ title }}</h2>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('stations.list_stations') }}" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.name.label }}</label>
+                    {{ form.name(class="form-control", placeholder="e.g. Central Station") }}
+                    {% if form.name.errors %}
+                        {% for error in form.name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.address.label }}</label>
+                    {{ form.address(class="form-control", placeholder="Street name and number") }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.phone.label }}</label>
+                    {{ form.phone(class="form-control") }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.email.label }}</label>
+                    {{ form.email(class="form-control") }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.max_vehicles.label }}</label>
+                    {{ form.max_vehicles(class="form-control", type="number") }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.max_personnel.label }}</label>
+                    {{ form.max_personnel(class="form-control", type="number") }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.latitude.label }}</label>
+                    {{ form.latitude(class="form-control", step="0.0001") }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.longitude.label }}</label>
+                    {{ form.longitude(class="form-control", step="0.0001") }}
+                </div>
+            </div>
+
+            <div class="mb-3 form-check">
+                {{ form.is_active(class="form-check-input") }}
+                <label class="form-check-label">{{ form.is_active.label }}</label>
+            </div>
+
+            <button type="submit" class="btn btn-success">{{ form.submit.label }}</button>
+            
+            {% if station %}
+            <button type="button" class="btn btn-danger float-end" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                Delete Station
+            </button>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if station %}
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete <strong>{{ station.name }}</strong>? This action cannot be undone.
+                {% if station.vehicles or station.personnel %}
+                <div class="alert alert-warning mt-2">
+                    Note: You cannot delete stations with assigned resources.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('stations.delete_station', station_id=station.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger" {% if station.vehicles or station.personnel %}disabled{% endif %}>Confirm Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

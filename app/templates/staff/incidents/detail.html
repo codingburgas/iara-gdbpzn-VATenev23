@@ -31,6 +31,25 @@
             </div>
         </div>
 
+        {% if weather %}
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white"><h5 class="mb-0">Current Weather at Location</h5></div>
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <img src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="{{ weather.description }}">
+                    <div class="ms-3">
+                        <h3 class="mb-0">{{ weather.temp }}°C</h3>
+                        <p class="text-capitalize mb-0">{{ weather.description }}</p>
+                    </div>
+                    <div class="ms-auto border-start ps-3">
+                        <p class="mb-1"><strong>💨 Wind:</strong> {{ weather.wind_speed }} m/s</p>
+                        <p class="mb-1"><strong>💧 Humidity:</strong> {{ weather.humidity }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card mb-3">
             <div class="card-header bg-dark text-white"><h5 class="mb-0">Assigned Unit</h5></div>
             <div class="card-body">

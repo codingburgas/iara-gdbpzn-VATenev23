@@ -1,7 +1,17 @@
 {% extends "staff/base.html" %}
 
 {% block content %}
-<div class="row"><div class="col-12"><h2>Commander Dashboard</h2><hr></div></div>
+<div class="row"><div class="col-12 d-flex justify-content-between align-items-center"><h2>Commander Dashboard</h2>
+    {% if weather %}
+    <div class="d-flex align-items-center bg-info text-white p-2 rounded shadow-sm">
+        <img src="https://openweathermap.org/img/wn/{{ weather.icon }}.png" alt="{{ weather.description }}" style="width: 40px;">
+        <div class="ms-2">
+            <span class="fw-bold">{{ weather.temp }}°C</span>
+            <small class="d-block text-capitalize" style="font-size: 0.75rem;">Burgas: {{ weather.description }}</small>
+        </div>
+    </div>
+    {% endif %}
+</div><hr></div>
 <div class="row mb-4">
     <div class="col-md-3"><div class="card text-white bg-dark"><div class="card-body"><h6>Total Incidents</h6><h3>{{ stats.total_incidents }}</h3></div></div></div>
     <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h6>Active Incidents</h6><h3>{{ stats.active_incidents }}</h3></div></div></div>

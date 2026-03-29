@@ -3,8 +3,9 @@ from app import db
 from app.models.incident import Incident, StatusUpdate
 from app.models.vehicle import Vehicle
 from app.models.user import UserModel
+from app.models.firefighter import Firefighter
 from app.forms.incident_forms import IncidentForm, StatusUpdateForm
-from app.utils import login_required, role_required, create_notification, generate_incident_pdf
+from app.utils import login_required, role_required, create_notification, generate_incident_pdf, get_weather
 import datetime
 import csv
 from io import StringIO
@@ -164,10 +165,15 @@ def detail(incident_id):
         else:
             flash('Status unchanged', 'info')
 
+    weather = None
+    if incident.latitude and incident.longitude:
+        weather = get_weather(incident.latitude, incident.longitude)
+
     return render_template('staff/incidents/detail.html',
                            incident=incident,
                            form=form,
-                           status_history=status_history)
+                           status_history=status_history,
+                           weather=weather)
 
 
 @incidents_bp.route('/staff/incident/<int:incident_id>/quick-status', methods=['POST'])

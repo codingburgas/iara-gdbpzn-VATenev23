@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import flash, redirect, url_for, session, send_file
+from flask import flash, redirect, url_for, session, send_file, current_app
 import requests
 import datetime
 import io
@@ -78,6 +78,45 @@ def geocode_address(address):
     except:
         pass
     return None, None
+
+
+def get_weather(lat, lon):
+    """Fetch current weather for given coordinates using OpenWeatherMap"""
+    api_key = current_app.config.get('WEATHER_API_KEY')
+    
+    # MOCK MODE: If no valid key, return fake data for testing
+    if not api_key or api_key == '00000000000000000000000000000000':
+        return {
+            'temp': 22.5,
+            'description': 'clear sky (TEST MODE)',
+            'icon': '01d',
+            'humidity': 45,
+            'wind_speed': 3.2,
+            'wind_deg': 180
+        }
+
+    try:
+        url = "https://api.openweathermap.org/data/2.5/weather"
+        params = {
+            'lat': lat,
+            'lon': lon,
+            'appid': api_key,
+            'units': 'metric'
+        }
+        response = requests.get(url, params=params, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'temp': data['main']['temp'],
+                'description': data['weather'][0]['description'],
+                'icon': data['weather'][0]['icon'],
+                'humidity': data['main']['humidity'],
+                'wind_speed': data['wind']['speed'],
+                'wind_deg': data['wind'].get('deg', 0)
+            }
+    except Exception as e:
+        print(f"Weather API error: {e}")
+    return None
 
 
 def create_notification(user_id, title, message, incident_id=None):
