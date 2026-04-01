@@ -1,0 +1,49 @@
+/* Theme Colors and Variables */
+
+:root {
+    --primary-color: #dc3545;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --dark-color: #343a40;
+    --light-color: #f8f9fa;
+
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+
+    --border-radius: 8px;
+    --border-radius-sm: 4px;
+    --border-radius-lg: 12px;
+
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Status Colors */
+.bg-status-reported { background-color: #0d6efd; }
+.bg-status-dispatched { background-color: #20c997; }
+.bg-status-on-scene { background-color: #ffc107; }
+.bg-status-closed { background-color: #6c757d; }
+
+/* Priority Colors */
+.text-priority-urgent { color: #dc3545; }
+.text-priority-high { color: #fd7e14; }
+.text-priority-normal { color: #20c997; }
+.text-priority-low { color: #6c757d; }
+
+.bg-priority-urgent { background-color: #dc3545; }
+.bg-priority-high { background-color: #fd7e14; }
+.bg-priority-normal { background-color: #20c997; }
+.bg-priority-low { background-color: #6c757d; }
+
+/* Incident Type Colors */
+.bg-type-fire { background-color: #dc3545; }
+.bg-type-rescue { background-color: #28a745; }
+.bg-type-accident { background-color: #ffc107; }
+.bg-type-hazmat { background-color: #fd7e14; }

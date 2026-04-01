@@ -1,0 +1,182 @@
+/* Mobile Responsive Styles */
+
+/* Small devices (phones, 576px and down) */
+@media (max-width: 576px) {
+    /* Typography */
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1.25rem;
+    }
+
+    /* Cards */
+    .card-body {
+        padding: 1rem;
+    }
+
+    /* Stats cards - 2 per row on mobile */
+    .stats-card {
+        margin-bottom: 0.75rem;
+    }
+
+    .stats-card .display-4 {
+        font-size: 2rem;
+    }
+
+    /* Buttons - full width on mobile */
+    .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+        min-width: 80px;
+    }
+
+    /* Navbar adjustments */
+    .navbar .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    /* Tables - make scrollable */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table td, .table th {
+        white-space: nowrap;
+    }
+
+    /* Forms - prevent zoom on iOS */
+    .form-control, .form-select {
+        font-size: 16px;
+    }
+
+    /* Modals - full width on mobile */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    /* Dashboard cards */
+    .dashboard-stats .col-6 {
+        padding: 0 0.5rem;
+    }
+
+    /* Badges */
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.3em 0.6em;
+    }
+
+    /* Map height */
+    #map {
+        height: 400px !important;
+    }
+
+    /* Chat messages */
+    .chat-message {
+        font-size: 0.9rem;
+    }
+
+    /* Button groups */
+    .btn-group-sm .btn {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+    }
+}
+
+/* Medium devices (tablets, 768px and down) */
+@media (max-width: 768px) {
+    /* Cards spacing */
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    /* Dashboard stats - 2 per row */
+    .dashboard-stats .col-md-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    /* Navbar dropdowns */
+    .dropdown-menu {
+        position: absolute !important;
+        max-width: 90vw;
+    }
+
+    /* Tables */
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    /* Form groups */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Large devices (laptops, 992px and up) */
+@media (min-width: 992px) {
+    .container-fluid {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+/* Touch-friendly adjustments for mobile */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger touch targets */
+    .btn,
+    .nav-link,
+    .dropdown-item,
+    .list-group-item {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Better spacing for touch */
+    .btn-group .btn {
+        padding: 0.6rem 0.8rem;
+    }
+
+    /* Remove hover effects on touch */
+    .btn:hover {
+        transform: none;
+    }
+
+    .stat-card:hover {
+        transform: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn-group,
+    .btn,
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+        padding: 0;
+        margin: 0;
+    }
+
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
