@@ -1,0 +1,351 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h2>📊 Analytics Dashboard</h2>
+        <p class="text-muted">Performance metrics and statistics</p>
+    </div>
+    <div class="col-auto">
+        <form method="GET" class="d-flex">
+            <select name="days" class="form-select me-2" style="width: auto;">
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Apply</button>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6 class="card-title">Total Incidents</h6>
+                <h2 class="mb-0">{{ stats.total_incidents }}</h2>
+                <small>Active: {{ stats.active_incidents }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6 class="card-title">Avg Response Time</h6>
+                <h2 class="mb-0">{{ stats.avg_response_time }} min</h2>
+                <small>Min: {{ stats.min_response_time }} / Max: {{ stats.max_response_time }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6 class="card-title">Task Completion</h6>
+                <h2 class="mb-0">{{ stats.task_completion_rate }}%</h2>
+                <small>{{ stats.completed_tasks }}/{{ stats.total_tasks }} tasks</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h6 class="card-title">Request Fulfillment</h6>
+                <h2 class="mb-0">{{ stats.request_fulfillment_rate }}%</h2>
+                <small>{{ stats.fulfilled_requests }}/{{ stats.total_requests }} requests</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Incidents by Type</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="incidentTypeChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Incidents by Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="incidentStatusChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Daily Incidents (Last {{ days }} days)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyIncidentsChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Monthly Incidents</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyIncidentsChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 3 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Response Time by Incident Type</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="responseByTypeChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Response Time Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="responseTrendChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 4 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Tasks by Priority</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="tasksByPriorityChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Resource Requests by Type</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="requestsByTypeChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 5 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Users by Role</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="usersByRoleChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Resource Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-2">
+                            <h6>Firefighters</h6>
+                            <h3>{{ stats.total_firefighters }}</h3>
+                            <small>Available: {{ stats.available_firefighters }}</small>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div class="progress-bar bg-success" style="width: {{ (stats.available_firefighters / stats.total_firefighters * 100) if stats.total_firefighters > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-2">
+                            <h6>Vehicles</h6>
+                            <h3>{{ stats.total_vehicles }}</h3>
+                            <small>Available: {{ stats.available_vehicles }}</small>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div class="progress-bar bg-primary" style="width: {{ (stats.available_vehicles / stats.total_vehicles * 100) if stats.total_vehicles > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Incident by Type Chart
+    var typeLabels = {{ chart_data.incident_type_labels|tojson }};
+    var typeValues = {{ chart_data.incident_type_values|tojson }};
+
+    new Chart(document.getElementById('incidentTypeChart'), {
+        type: 'doughnut',
+        data: {
+            labels: typeLabels,
+            datasets: [{
+                data: typeValues,
+                backgroundColor: ['#dc3545', '#28a745', '#ffc107', '#fd7e14', '#6c757d']
+            }]
+        }
+    });
+
+    // Incident by Status Chart
+    var statusLabels = {{ chart_data.incident_status_labels|tojson }};
+    var statusValues = {{ chart_data.incident_status_values|tojson }};
+
+    new Chart(document.getElementById('incidentStatusChart'), {
+        type: 'pie',
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusValues,
+                backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#198754', '#6c757d']
+            }]
+        }
+    });
+
+    // Daily Incidents Chart
+    var dailyLabels = {{ chart_data.daily_incidents|map(attribute='date')|list|tojson }};
+    var dailyValues = {{ chart_data.daily_incidents|map(attribute='count')|list|tojson }};
+
+    new Chart(document.getElementById('dailyIncidentsChart'), {
+        type: 'line',
+        data: {
+            labels: dailyLabels,
+            datasets: [{
+                label: 'Incidents',
+                data: dailyValues,
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        }
+    });
+
+    // Monthly Incidents Chart
+    var monthlyLabels = {{ chart_data.monthly_incidents|map(attribute='month')|list|tojson }};
+    var monthlyValues = {{ chart_data.monthly_incidents|map(attribute='count')|list|tojson }};
+
+    new Chart(document.getElementById('monthlyIncidentsChart'), {
+        type: 'bar',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Incidents',
+                data: monthlyValues,
+                backgroundColor: '#0d6efd'
+            }]
+        }
+    });
+
+    // Response Time by Type Chart
+    var responseLabels = {{ chart_data.response_by_type|map(attribute='type')|list|tojson }};
+    var responseValues = {{ chart_data.response_by_type|map(attribute='avg_time')|list|tojson }};
+
+    new Chart(document.getElementById('responseByTypeChart'), {
+        type: 'bar',
+        data: {
+            labels: responseLabels,
+            datasets: [{
+                label: 'Avg Response Time (minutes)',
+                data: responseValues,
+                backgroundColor: '#20c997'
+            }]
+        }
+    });
+
+    // Response Time Trend Chart
+    var trendLabels = {{ chart_data.response_trend|map(attribute='date')|list|tojson }};
+    var trendValues = {{ chart_data.response_trend|map(attribute='avg_time')|list|tojson }};
+
+    new Chart(document.getElementById('responseTrendChart'), {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: [{
+                label: 'Avg Response Time (minutes)',
+                data: trendValues,
+                borderColor: '#ffc107',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        }
+    });
+
+    // Tasks by Priority Chart
+    var taskLabels = {{ chart_data.task_priority_labels|tojson }};
+    var taskValues = {{ chart_data.task_priority_values|tojson }};
+
+    new Chart(document.getElementById('tasksByPriorityChart'), {
+        type: 'bar',
+        data: {
+            labels: taskLabels,
+            datasets: [{
+                label: 'Tasks',
+                data: taskValues,
+                backgroundColor: ['#dc3545', '#ffc107', '#0d6efd', '#20c997']
+            }]
+        }
+    });
+
+    // Requests by Type Chart
+    var requestLabels = {{ chart_data.request_type_labels|tojson }};
+    var requestValues = {{ chart_data.request_type_values|tojson }};
+
+    new Chart(document.getElementById('requestsByTypeChart'), {
+        type: 'pie',
+        data: {
+            labels: requestLabels,
+            datasets: [{
+                data: requestValues,
+                backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#dc3545', '#6c757d']
+            }]
+        }
+    });
+
+    // Users by Role Chart
+    var userLabels = {{ chart_data.user_role_labels|tojson }};
+    var userValues = {{ chart_data.user_role_values|tojson }};
+
+    new Chart(document.getElementById('usersByRoleChart'), {
+        type: 'doughnut',
+        data: {
+            labels: userLabels,
+            datasets: [{
+                data: userValues,
+                backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#dc3545', '#6c757d']
+            }]
+        }
+    });
+</script>
+{% endblock %}

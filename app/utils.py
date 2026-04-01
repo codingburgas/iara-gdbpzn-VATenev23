@@ -273,3 +273,4 @@ def create_default_templates():
 
     db.session.commit()
     print("Default templates added!")
+

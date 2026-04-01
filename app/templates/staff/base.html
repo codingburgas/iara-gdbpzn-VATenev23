@@ -55,6 +55,13 @@
                                     <a class="nav-link" href="{{ url_for('dashboard.dynamic_dashboard') }}">📊 Dashboard</a>
                                 </li>
 
+                                <!-- Analytics - visible only to commander -->
+                                {% if session.user_role == 'commander' %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('dashboard.analytics_dashboard') }}">📈 Analytics</a>
+                                </li>
+                                {% endif %}
+
                                 <!-- Incidents - visible to all -->
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">🚨 Incidents</a>
