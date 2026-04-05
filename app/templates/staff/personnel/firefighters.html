@@ -24,7 +24,27 @@
         {% if firefighters %}
         <table class="table table-striped"><thead><tr><th>Name</th><th>Rank</th><th>Status</th><th>Station</th><th>Vehicle</th><th>Account</th><th>Actions</th></tr></thead>
         <tbody>{% for f in firefighters %}<tr><td>{{ f.name }}</td><td>{{ f.rank }}</td><td><span class="badge bg-{% if f.status == 'available' %}success{% elif f.status == 'on_duty' %}primary{% elif f.status == 'vacation' %}warning{% elif f.status == 'sick' %}danger{% else %}secondary{% endif %}">{{ f.status }}</span></td><td>{{ f.station.name if f.station else 'Unassigned' }}</td><td>{% if f.assigned_vehicle %}{{ f.assigned_vehicle.type }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td><td>{% if f.user %}<span class="badge bg-success">✅ {{ f.user.username }}</span>{% else %}<span class="badge bg-warning">⚠️ No account</span>{% endif %}</td><td><a href="{{ url_for('personnel.assign_firefighter', firefighter_id=f.id) }}" class="btn btn-sm btn-outline-primary">Assign to Vehicle</a></td></tr>{% endfor %}</tbody>
-        </table>{% else %}<p class="text-muted">No firefighters match your search.</p>{% endif %}
+        </table>
+        {% elif search_query or status_filter or vehicle_filter %}
+        <p class="text-muted">No firefighters match your search.</p>
+        {% else %}
+        <table class="table table-striped">
+            <thead><tr><th>Name</th><th>Rank</th><th>Status</th><th>Station</th><th>Vehicle</th><th>Account</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for i in range(5) %}
+                <tr>
+                    <td><div class="skeleton skeleton-text"></div></td>
+                    <td><div class="skeleton skeleton-text"></div></td>
+                    <td><div class="skeleton skeleton-text"></div></td>
+                    <td><div class="skeleton skeleton-text"></div></td>
+                    <td><div class="skeleton skeleton-text"></div></td>
+                    <td><div class="skeleton skeleton-text"></div></td>
+                    <td><div class="skeleton skeleton-text" style="width: 80px;"></div></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
     </div>
     <div class="tab-pane fade" id="vehicles">
         {% if vehicles %}<table class="table table-striped"><thead><tr><th>Type</th><th>Station</th><th>Crew</th></tr></thead>

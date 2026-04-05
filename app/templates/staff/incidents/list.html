@@ -75,13 +75,16 @@
             <td>{{ incident.location }}</td>
             <td><span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">{{ incident.incident_type }}</span></td>
             <td>
-                <select class="form-select form-select-sm quick-status" data-incident="{{ incident.id }}" style="width: auto; min-width: 100px;">
-                    <option value="Reported" {% if incident.status == 'Reported' %}selected{% endif %}>🚨 Reported</option>
-                    <option value="Dispatched" {% if incident.status == 'Dispatched' %}selected{% endif %}>🚒 Dispatched</option>
-                    <option value="On Scene" {% if incident.status == 'On Scene' %}selected{% endif %}>🔥 On Scene</option>
-                    <option value="Contained" {% if incident.status == 'Contained' %}selected{% endif %}>📦 Contained</option>
-                    <option value="Closed" {% if incident.status == 'Closed' %}selected{% endif %}>✅ Closed</option>
-                </select>
+                <div class="d-flex align-items-center">
+                    <select class="form-select form-select-sm quick-status" data-incident="{{ incident.id }}" style="width: auto; min-width: 100px;">
+                        <option value="Reported" {% if incident.status == 'Reported' %}selected{% endif %}>🚨 Reported</option>
+                        <option value="Dispatched" {% if incident.status == 'Dispatched' %}selected{% endif %}>🚒 Dispatched</option>
+                        <option value="On Scene" {% if incident.status == 'On Scene' %}selected{% endif %}>🔥 On Scene</option>
+                        <option value="Contained" {% if incident.status == 'Contained' %}selected{% endif %}>📦 Contained</option>
+                        <option value="Closed" {% if incident.status == 'Closed' %}selected{% endif %}>✅ Closed</option>
+                    </select>
+                    <div class="spinner-border spinner-border-sm text-primary ms-2 d-none status-spinner" id="spinner-{{ incident.id }}"></div>
+                </div>
             </td>
             <td>{% if incident.assigned_vehicle %}{{ incident.assigned_vehicle.type }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
             <td>{{ incident.reported_at.strftime('%H:%M %d/%m') }}</td>
@@ -97,8 +100,12 @@ document.querySelectorAll('.quick-status').forEach(function(select) {
         var incidentId = this.dataset.incident;
         var newStatus = this.value;
         var originalValue = this.getAttribute('data-original') || this.value;
+        var spinner = document.getElementById('spinner-' + incidentId);
+        
         this.disabled = true;
         this.style.opacity = '0.5';
+        if (spinner) spinner.classList.remove('d-none');
+        
         fetch('/staff/incident/' + incidentId + '/quick-status', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -125,6 +132,7 @@ document.querySelectorAll('.quick-status').forEach(function(select) {
         .finally(() => {
             this.disabled = false;
             this.style.opacity = '1';
+            if (spinner) spinner.classList.add('d-none');
             setTimeout(() => { this.style.borderColor = ''; }, 2000);
         });
     });

@@ -48,6 +48,23 @@
                 </div>
             </div>
         </div>
+        {% elif weather is none %}
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white"><h5 class="mb-0">Current Weather at Location</h5></div>
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="skeleton skeleton-circle"></div>
+                    <div class="ms-3 flex-grow-1">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-text" style="width: 100px;"></div>
+                    </div>
+                    <div class="ms-auto border-start ps-3">
+                        <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                        <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endif %}
 
         <div class="card mb-3">

@@ -27,6 +27,8 @@
                         <span class="badge {% if firefighter.status == 'available' %}bg-success{% else %}bg-warning{% endif %} fs-5">
                             {{ firefighter.status }}
                         </span>
+                    {% elif session.logged_in %}
+                        <div class="skeleton skeleton-title"></div>
                     {% else %}
                         <span class="badge bg-secondary">Unknown</span>
                     {% endif %}
@@ -38,7 +40,11 @@
         <div class="card text-white bg-success">
             <div class="card-body">
                 <h6>Assigned Incidents</h6>
-                <h3>{{ incidents|length }}</h3>
+                {% if incidents is defined %}
+                    <h3>{{ incidents|length }}</h3>
+                {% else %}
+                    <div class="skeleton skeleton-title"></div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -47,10 +53,14 @@
             <div class="card-body">
                 <h6>My Vehicle</h6>
                 <h5>
-                    {% if firefighter and firefighter.assigned_vehicle %}
-                        {{ firefighter.assigned_vehicle.type|truncate(20) }}
+                    {% if firefighter %}
+                        {% if firefighter.assigned_vehicle %}
+                            {{ firefighter.assigned_vehicle.type|truncate(20) }}
+                        {% else %}
+                            Not assigned
+                        {% endif %}
                     {% else %}
-                        Not assigned
+                        <div class="skeleton skeleton-text"></div>
                     {% endif %}
                 </h5>
             </div>
@@ -61,10 +71,14 @@
             <div class="card-body">
                 <h6>Current Shift</h6>
                 <h5>
-                    {% if firefighter and firefighter.current_shift %}
-                        Active
+                    {% if firefighter %}
+                        {% if firefighter.current_shift %}
+                            Active
+                        {% else %}
+                            Not started
+                        {% endif %}
                     {% else %}
-                        Not started
+                        <div class="skeleton skeleton-text"></div>
                     {% endif %}
                 </h5>
             </div>

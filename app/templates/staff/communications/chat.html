@@ -23,7 +23,26 @@
 <script>
 var chatContainer = document.getElementById('chatMessages');
 if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
-function sendQuickMessage(templateId) { fetch(`/staff/incident/{{ incident.id }}/chat/quick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({template_id: templateId}) }).then(r=>r.json()).then(data=>{if(data.success)location.reload();}); }
+function sendQuickMessage(templateId) { 
+    LoadingState.start();
+    fetch(`/staff/incident/{{ incident.id }}/chat/quick`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({template_id: templateId}) 
+    })
+    .then(r=>r.json())
+    .then(data=>{
+        if(data.success) location.reload();
+        else {
+            LoadingState.finish();
+            alert('Error sending quick message');
+        }
+    })
+    .catch(err => {
+        LoadingState.finish();
+        console.error(err);
+    }); 
+}
 setInterval(function() { fetch(window.location.href).then(r=>r.text()).then(html=>{var parser=new DOMParser(),doc=parser.parseFromString(html,'text/html'),newMessages=doc.getElementById('chatMessages');if(newMessages&&chatContainer.innerHTML!==newMessages.innerHTML){chatContainer.innerHTML=newMessages.innerHTML;chatContainer.scrollTop=chatContainer.scrollHeight;}}); }, 10000);
 </script>
 {% endblock %}

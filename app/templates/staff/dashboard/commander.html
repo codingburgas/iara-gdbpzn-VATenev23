@@ -13,10 +13,54 @@
     {% endif %}
 </div><hr></div>
 <div class="row mb-4">
-    <div class="col-md-3"><div class="card text-white bg-dark"><div class="card-body"><h6>Total Incidents</h6><h3>{{ stats.total_incidents }}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h6>Active Incidents</h6><h3>{{ stats.active_incidents }}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body"><h6>Available Firefighters</h6><h3>{{ stats.available_firefighters }}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-info"><div class="card-body"><h6>Total Vehicles</h6><h3>{{ stats.total_vehicles }}</h3></div></div></div>
+    <div class="col-md-3">
+        <div class="card text-white bg-dark">
+            <div class="card-body">
+                <h6>Total Incidents</h6>
+                {% if stats.total_incidents is defined %}
+                    <h3>{{ stats.total_incidents }}</h3>
+                {% else %}
+                    <div class="skeleton skeleton-title"></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>Active Incidents</h6>
+                {% if stats.active_incidents is defined %}
+                    <h3>{{ stats.active_incidents }}</h3>
+                {% else %}
+                    <div class="skeleton skeleton-title"></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6>Available Firefighters</h6>
+                {% if stats.available_firefighters is defined %}
+                    <h3>{{ stats.available_firefighters }}</h3>
+                {% else %}
+                    <div class="skeleton skeleton-title"></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6>Total Vehicles</h6>
+                {% if stats.total_vehicles is defined %}
+                    <h3>{{ stats.total_vehicles }}</h3>
+                {% else %}
+                    <div class="skeleton skeleton-title"></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 <div class="row mb-4">
     <div class="col-md-6"><div class="card"><div class="card-header bg-dark text-white"><h5>Incidents by Type</h5></div><div class="card-body"><canvas id="incidentTypeChart"></canvas></div></div></div>
