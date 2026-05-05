@@ -274,3 +274,180 @@ def create_default_templates():
     db.session.commit()
     print("Default templates added!")
 
+
+def create_default_equipment():
+    """Create default equipment for testing"""
+    from app.models.equipment import Equipment
+    from app.models.vehicle import Vehicle
+    import datetime
+
+    # Check if equipment already exists
+    if Equipment.query.count() > 0:
+        print("Equipment already exists, skipping import.")
+        return
+
+    # Get vehicles
+    vehicles = Vehicle.query.all()
+    vehicle_dict = {v.id: v for v in vehicles}
+
+    default_equipment = [
+        # Vehicle 101 equipment (Aerial Ladder)
+        {
+            'name': 'Aerial Ladder - 30m',
+            'type': 'tool',
+            'model': 'Magirus M30L',
+            'serial_number': 'LAD-101-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 101,
+            'notes': 'Main ladder for aerial operations'
+        },
+        {
+            'name': 'Chainsaw - Stihl MS 881',
+            'type': 'tool',
+            'model': 'Stihl MS 881',
+            'serial_number': 'SAW-101-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 101,
+            'notes': 'For cutting obstacles'
+        },
+        {
+            'name': 'Thermal Imaging Camera',
+            'type': 'tool',
+            'model': 'FLIR K65',
+            'serial_number': 'CAM-101-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 101,
+            'notes': 'For finding hot spots'
+        },
+        # Vehicle 102 equipment (Water Tanker)
+        {
+            'name': 'Hose - 5 inch Supply Hose',
+            'type': 'hose',
+            'model': 'PONN Supreme',
+            'serial_number': 'HOS-102-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 102,
+            'notes': '50m supply hose'
+        },
+        {
+            'name': 'Hose - 2.5 inch Attack Hose',
+            'type': 'hose',
+            'model': 'Mercedes Textiles',
+            'serial_number': 'HOS-102-002',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 102,
+            'notes': '30m attack line'
+        },
+        {
+            'name': 'Portable Pump',
+            'type': 'tool',
+            'model': 'Honda WX15',
+            'serial_number': 'PMP-102-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 102,
+            'notes': 'For drafting water'
+        },
+        # Vehicle 103 equipment (Command Vehicle)
+        {
+            'name': 'Portable Radio Set',
+            'type': 'tool',
+            'model': 'Motorola APX 8000',
+            'serial_number': 'RAD-103-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 103,
+            'notes': 'Command comms'
+        },
+        {
+            'name': 'Drone with Thermal Camera',
+            'type': 'tool',
+            'model': 'DJI Matrice 300',
+            'serial_number': 'DRN-103-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': 103,
+            'notes': 'Aerial surveillance'
+        },
+        # General equipment (not assigned to vehicle)
+        {
+            'name': 'Fire Extinguisher - ABC 10lb',
+            'type': 'extinguisher',
+            'model': 'Amerex 570',
+            'serial_number': 'EXT-001-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': None,
+            'notes': 'Multi-purpose extinguisher'
+        },
+        {
+            'name': 'Fire Extinguisher - CO2 20lb',
+            'type': 'extinguisher',
+            'model': 'Amerex 320',
+            'serial_number': 'EXT-001-002',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': None,
+            'notes': 'For electrical fires'
+        },
+        {
+            'name': 'Halligan Tool',
+            'type': 'tool',
+            'model': 'Pro-Bar',
+            'serial_number': 'HAL-001-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': None,
+            'notes': 'Forcible entry tool'
+        },
+        {
+            'name': 'Medical Jump Bag',
+            'type': 'medical',
+            'model': 'Meret Basic Life Support',
+            'serial_number': 'MED-001-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': None,
+            'notes': 'Basic first aid supplies'
+        },
+        {
+            'name': 'SCBA Set',
+            'type': 'gear',
+            'model': 'MSA G1',
+            'serial_number': 'SCB-001-001',
+            'status': 'available',
+            'condition': 'good',
+            'vehicle_id': None,
+            'notes': 'Self-contained breathing apparatus'
+        },
+    ]
+
+    added = 0
+    for eq_data in default_equipment:
+        # Check if serial number already exists
+        if eq_data['serial_number'] and Equipment.query.filter_by(serial_number=eq_data['serial_number']).first():
+            continue
+
+        equipment = Equipment(
+            name=eq_data['name'],
+            type=eq_data['type'],
+            model=eq_data['model'],
+            serial_number=eq_data['serial_number'],
+            status=eq_data['status'],
+            condition=eq_data['condition'],
+            vehicle_id=eq_data['vehicle_id'],
+            notes=eq_data['notes'],
+            last_inspected=datetime.datetime.utcnow()
+        )
+        # Set next inspection date (6 months from now)
+        equipment.next_inspection = datetime.datetime.utcnow() + datetime.timedelta(days=180)
+        db.session.add(equipment)
+        added += 1
+
+    db.session.commit()
+    print(f"Added {added} equipment items")

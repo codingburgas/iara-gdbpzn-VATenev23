@@ -165,7 +165,7 @@ def return_equipment(assignment_id):
 @login_required
 @role_required('dispatcher', 'commander')
 def import_equipment():
-    from utils import create_default_equipment
+    from app.utils import create_default_equipment
     create_default_equipment()
     flash('Default equipment added successfully!', 'success')
     return redirect(url_for('equipment.list_equipment'))
