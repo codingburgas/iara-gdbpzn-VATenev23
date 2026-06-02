@@ -133,7 +133,10 @@ def get_route(start_lat, start_lng, end_lat, end_lng):
 
 def start_vehicle_route(vehicle, dest_lat, dest_lng):
     """Compute and store a live road route from the vehicle's current position
-    to a destination and mark it en route. The caller commits the session."""
+    to a destination and mark it en route. The caller commits the session.
+
+    Also marks the unit's assigned firefighters as on_duty so the personnel
+    roster reflects who is actively responding."""
     if vehicle.latitude is None or vehicle.longitude is None:
         vehicle.latitude, vehicle.longitude = 42.5063, 27.4678  # central station default
 
@@ -149,7 +152,17 @@ def start_vehicle_route(vehicle, dest_lat, dest_lng):
     vehicle.route_dest_lat = dest_lat
     vehicle.route_dest_lng = dest_lng
     vehicle.status = 'en_route'
+    _set_crew_status(vehicle, 'on_duty')
     return route
+
+
+def _set_crew_status(vehicle, new_status):
+    """Bulk-update every firefighter assigned to a vehicle. Leaves firefighters
+    who are unavailable for non-operational reasons (sick, vacation) untouched."""
+    LOCKED = {'sick', 'vacation', 'training'}
+    for f in vehicle.firefighters:
+        if f.status not in LOCKED:
+            f.status = new_status
 
 
 def _point_along(poly, frac):
@@ -213,6 +226,18 @@ def clear_vehicle_route(vehicle):
     vehicle.route_dest_lng = None
 
 
+def release_incident_units(incident):
+    """When an incident is closed, return its assigned unit to station status
+    and free the crew back to 'available'."""
+    v = incident.assigned_vehicle
+    if not v:
+        return
+    clear_vehicle_route(v)
+    v.status = 'station'
+    v.current_incident_id = None
+    _set_crew_status(v, 'available')
+
+
 def process_vehicle_arrivals():
     """Advance any en-route vehicle that has reached its destination: snap it to
     the incident, mark it on scene, flip the incident to 'On Scene' and log it.
@@ -234,6 +259,8 @@ def process_vehicle_arrivals():
         v.latitude = v.route_dest_lat
         v.longitude = v.route_dest_lng
         v.status = 'on_scene'
+        # Crew stays on duty while at the scene.
+        _set_crew_status(v, 'on_duty')
 
         inc = v.current_incident
         if inc:

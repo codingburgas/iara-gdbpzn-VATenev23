@@ -6,7 +6,7 @@ from app.models.user import UserModel
 from app.models.firefighter import Firefighter
 from app.forms.incident_forms import IncidentForm, StatusUpdateForm
 from app.utils import (login_required, role_required, create_notification, generate_incident_pdf,
-                       get_weather, geocode_address, start_vehicle_route)
+                       get_weather, geocode_address, start_vehicle_route, release_incident_units)
 import datetime
 import csv
 from io import StringIO
@@ -158,6 +158,7 @@ def detail(incident_id):
                 incident.on_scene_at = now
             elif form.new_status.data == 'Closed' and not incident.closed_at:
                 incident.closed_at = now
+                release_incident_units(incident)
 
             db.session.commit()
 
@@ -228,6 +229,7 @@ def quick_status_update(incident_id):
         incident.on_scene_at = now
     elif new_status == 'Closed' and not incident.closed_at:
         incident.closed_at = now
+        release_incident_units(incident)
 
     db.session.commit()
 

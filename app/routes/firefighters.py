@@ -5,7 +5,8 @@ from app.models.vehicle import Vehicle
 from app.models.user import UserModel
 from app.models.shift import Shift
 from app.models.incident import Incident
-from app.utils import login_required, role_required, create_notification, start_vehicle_route
+from app.utils import (login_required, role_required, create_notification,
+                       start_vehicle_route, _set_crew_status)
 import datetime
 
 firefighters_bp = Blueprint('personnel', __name__)
@@ -259,6 +260,7 @@ def assign_vehicle_to_incident(vehicle_id, incident_id):
         start_vehicle_route(vehicle, incident.latitude, incident.longitude)
     else:
         vehicle.status = 'en_route'
+        _set_crew_status(vehicle, 'on_duty')
 
     if not incident.assigned_vehicle_id:
         incident.assigned_vehicle_id = vehicle.id

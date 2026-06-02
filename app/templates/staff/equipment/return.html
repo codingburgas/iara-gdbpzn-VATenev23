@@ -1,0 +1,46 @@
+{% extends "staff/base.html" %}
+{% block page_title %}Return Equipment{% endblock %}
+{% block topbar_title %}Return Equipment{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Equipment</div>
+        <h1>Return: {{ equipment.name }}</h1>
+        <div class="page-sub">
+            Currently checked out to
+            {% if assignment.firefighter %}<strong>{{ assignment.firefighter.name }}</strong>{% else %}<em>—</em>{% endif %}
+            since {{ assignment.assigned_at.strftime('%d/%m %H:%M') }}
+        </div>
+    </div>
+    <a href="{{ url_for('equipment.detail', equipment_id=equipment.id) }}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-7 col-lg-6">
+        <div class="card mb-0">
+            <div class="card-header"><i class="fa-solid fa-right-to-bracket text-muted me-2"></i>Return Details</div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.condition.label(class="form-label") }}
+                        {{ form.condition(class="form-select") }}
+                        <small class="text-muted">If "Needs repair" or "Damaged", flag it for maintenance.</small>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control", rows=3, placeholder="Optional return notes.") }}
+                    </div>
+                    <div class="d-flex gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('equipment.detail', equipment_id=equipment.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "staff/base.html" %}
+{% block page_title %}Check Out Equipment{% endblock %}
+{% block topbar_title %}Check Out Equipment{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Equipment</div>
+        <h1>Check Out: {{ equipment.name }}</h1>
+        <div class="page-sub">{{ equipment.type|capitalize }}{% if equipment.serial_number %} · SN {{ equipment.serial_number }}{% endif %}</div>
+    </div>
+    <a href="{{ url_for('equipment.detail', equipment_id=equipment.id) }}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-7 col-lg-6">
+        <div class="card mb-0">
+            <div class="card-header"><i class="fa-solid fa-right-from-bracket text-muted me-2"></i>Assignment Details</div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    {{ form.equipment_id(type="hidden") }}
+
+                    <div class="mb-3">
+                        {{ form.incident_id.label(class="form-label") }}
+                        {{ form.incident_id(class="form-select") }}
+                        <small class="text-muted">Link this checkout to an active incident, if any.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.firefighter_id.label(class="form-label") }}
+                        {{ form.firefighter_id(class="form-select") }}
+                        <small class="text-muted">The firefighter taking responsibility for the item.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control", rows=3, placeholder="Optional notes (e.g. expected return time, condition).") }}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('equipment.detail', equipment_id=equipment.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

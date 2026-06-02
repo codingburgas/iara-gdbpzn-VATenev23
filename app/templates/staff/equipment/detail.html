@@ -1,0 +1,88 @@
+{% extends "staff/base.html" %}
+{% block page_title %}{{ equipment.name }}{% endblock %}
+{% block topbar_title %}Equipment Detail{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Equipment</div>
+        <h1>{{ equipment.name }}</h1>
+        <div class="page-sub">{{ equipment.type|capitalize }}{% if equipment.model %} · {{ equipment.model }}{% endif %}</div>
+    </div>
+    <div class="d-flex gap-2">
+        {% if session.user_role in ['dispatcher', 'commander'] and equipment.status == 'available' %}
+        <a href="{{ url_for('equipment.checkout', equipment_id=equipment.id) }}" class="btn btn-primary">
+            <i class="fa-solid fa-right-from-bracket"></i> Check Out
+        </a>
+        {% endif %}
+        {% if session.user_role == 'commander' %}
+        <a href="{{ url_for('equipment.edit_equipment', equipment_id=equipment.id) }}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-pen"></i> Edit
+        </a>
+        {% endif %}
+        <a href="{{ url_for('equipment.list_equipment') }}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card mb-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-circle-info text-muted me-2"></i>Information</span>
+                <span class="badge bg-{% if equipment.status == 'available' %}success{% elif equipment.status == 'in_use' %}primary{% elif equipment.status == 'maintenance' %}warning{% else %}secondary{% endif %}">{{ equipment.status|replace('_',' ') }}</span>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><td class="text-muted">Name</td><td class="text-end fw-semibold">{{ equipment.name }}</td></tr>
+                    <tr><td class="text-muted">Type</td><td class="text-end fw-semibold text-capitalize">{{ equipment.type }}</td></tr>
+                    <tr><td class="text-muted">Model</td><td class="text-end fw-semibold">{{ equipment.model or '—' }}</td></tr>
+                    <tr><td class="text-muted">Serial Number</td><td class="text-end fw-semibold">{{ equipment.serial_number or '—' }}</td></tr>
+                    <tr><td class="text-muted">Condition</td><td class="text-end"><span class="badge bg-{% if equipment.condition == 'good' %}success{% elif equipment.condition == 'fair' %}info{% elif equipment.condition == 'poor' %}warning{% else %}secondary{% endif %}">{{ equipment.condition }}</span></td></tr>
+                    <tr><td class="text-muted">Assigned To</td><td class="text-end fw-semibold">{% if equipment.vehicle %}{{ equipment.vehicle.type }}{% else %}<span class="text-muted">Not assigned</span>{% endif %}</td></tr>
+                    <tr><td class="text-muted">Last Inspected</td><td class="text-end fw-semibold">{% if equipment.last_inspected %}{{ equipment.last_inspected.strftime('%d/%m/%Y') }}{% else %}Never{% endif %}</td></tr>
+                    <tr><td class="text-muted">Next Inspection</td><td class="text-end fw-semibold">{% if equipment.next_inspection %}{{ equipment.next_inspection.strftime('%d/%m/%Y') }}{% else %}—{% endif %}</td></tr>
+                </table>
+                {% if equipment.notes %}
+                <hr>
+                <h6>Notes</h6>
+                <p class="mb-0 text-muted">{{ equipment.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card mb-0">
+            <div class="card-header"><i class="fa-solid fa-clock-rotate-left text-muted me-2"></i>Assignment History</div>
+            <div class="card-body">
+                {% if assignments %}
+                    {% for a in assignments %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>
+                                {% if a.firefighter %}{{ a.firefighter.name }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}
+                            </strong>
+                            <span class="badge bg-{% if a.status == 'returned' %}secondary{% else %}primary{% endif %}">{{ a.status }}</span>
+                        </div>
+                        <small class="text-muted d-block">
+                            {% if a.incident %}Incident #{{ a.incident.id }} · {% endif %}
+                            Out: {{ a.assigned_at.strftime('%d/%m %H:%M') }}
+                            {% if a.returned_at %}<br>Back: {{ a.returned_at.strftime('%d/%m %H:%M') }}{% endif %}
+                        </small>
+                        {% if a.status != 'returned' and session.user_role in ['dispatcher', 'commander'] %}
+                        <a href="{{ url_for('equipment.return_equipment', assignment_id=a.id) }}" class="btn btn-sm btn-outline-secondary mt-1">
+                            <i class="fa-solid fa-right-to-bracket"></i> Return
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No assignment history.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
