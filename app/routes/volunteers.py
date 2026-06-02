@@ -110,8 +110,41 @@ def add_training():
 @role_required('commander')
 def enroll_volunteers(training_id):
     training = TrainingSession.query.get_or_404(training_id)
-    approved_volunteers = VolunteerApplication.query.filter_by(status='approved').all()
+
+    # Don't offer volunteers who are already enrolled in this session.
+    enrolled_ids = {p.volunteer_id for p in training.participants if p.volunteer_id}
+    approved_volunteers = [v for v in VolunteerApplication.query.filter_by(status='approved').all()
+                           if v.id not in enrolled_ids]
 
     return render_template('staff/volunteers/enroll.html',
                            training=training,
                            volunteers=approved_volunteers)
+
+
+@volunteers_bp.route('/staff/training/<int:training_id>/enroll/<int:volunteer_id>', methods=['POST'])
+@login_required
+@role_required('commander')
+def enroll_volunteer(training_id, volunteer_id):
+    training = TrainingSession.query.get_or_404(training_id)
+    volunteer = VolunteerApplication.query.get_or_404(volunteer_id)
+
+    # Capacity check.
+    if len(training.participants) >= training.max_participants:
+        return {'success': False, 'error': 'This training session is full.'}, 400
+
+    # Duplicate check.
+    existing = TrainingParticipant.query.filter_by(
+        training_id=training_id, volunteer_id=volunteer_id).first()
+    if existing:
+        return {'success': False, 'error': 'Volunteer is already enrolled.'}, 400
+
+    participant = TrainingParticipant(
+        training_id=training_id,
+        volunteer_id=volunteer_id,
+        status='registered'
+    )
+    db.session.add(participant)
+    db.session.commit()
+
+    return {'success': True, 'message': f'{volunteer.full_name} enrolled.',
+            'name': volunteer.full_name}

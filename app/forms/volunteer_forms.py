@@ -16,9 +16,9 @@ class VolunteerApplicationForm(FlaskForm):
 class ApplicationReviewForm(FlaskForm):
     status = SelectField('Status',
                         choices=[('pending', 'Pending'),
-                                ('approved', '✅ Approved'),
-                                ('rejected', '❌ Rejected'),
-                                ('trained', '🎓 Trained')],
+                                ('approved', 'Approved'),
+                                ('rejected', 'Rejected'),
+                                ('trained', 'Trained')],
                         validators=[DataRequired()])
     notes = TextAreaField('Notes', validators=[Optional()])
     submit = SubmitField('Update Status')

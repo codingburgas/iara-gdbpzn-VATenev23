@@ -4,7 +4,8 @@ from app.models.incident import Incident
 from app.models.vehicle import Vehicle
 from app.models.map_annotation import MapAnnotation
 from app.forms.incident_forms import MapAnnotationForm
-from app.utils import login_required, role_required, create_notification
+from app.utils import (login_required, role_required, create_notification,
+                       vehicle_live_position, process_vehicle_arrivals)
 import datetime
 import json
 
@@ -21,6 +22,56 @@ def incident_map():
     return render_template('staff/map/incidents.html',
                            incidents=incidents,
                            vehicles=vehicles)
+
+
+@map_bp.route('/api/vehicles/locations')
+@login_required
+def vehicle_locations():
+    """Live vehicle positions for the map auto-refresh.
+
+    For en-route vehicles the current position is computed from the stored road
+    route and elapsed time, so units keep moving across reloads. When a unit
+    reaches the incident it is persisted as 'on_scene'."""
+    # Persist any vehicles that have reached their incident.
+    process_vehicle_arrivals()
+
+    vehicles = Vehicle.query.filter(
+        Vehicle.latitude.isnot(None),
+        Vehicle.longitude.isnot(None)
+    ).all()
+
+    result = []
+    for v in vehicles:
+        entry = {
+            'id': v.id,
+            'type': v.type,
+            'lat': v.latitude,
+            'lng': v.longitude,
+            'status': v.status,
+            'location': v.location,
+            'incident_id': v.current_incident_id,
+            'crew': [{'name': f.name, 'rank': f.rank} for f in v.firefighters],
+            'route': None,
+        }
+
+        live = vehicle_live_position(v)
+        if live:  # still en route (arrivals were already cleared above)
+            entry.update({
+                'lat': live['lat'],
+                'lng': live['lng'],
+                'status': 'en_route',
+                'route': json.loads(v.route_polyline),
+                'progress': live['progress'],
+                'total_seconds': v.route_total_seconds,
+                'real_seconds': v.route_real_seconds,
+                'eta_seconds': live['eta_seconds'],
+                'distance_m': v.route_distance_m,
+                'dest': [v.route_dest_lat, v.route_dest_lng],
+            })
+
+        result.append(entry)
+
+    return jsonify({'vehicles': result, 'server_time': datetime.datetime.utcnow().isoformat()})
 
 
 @map_bp.route('/staff/map/incident/<int:incident_id>')

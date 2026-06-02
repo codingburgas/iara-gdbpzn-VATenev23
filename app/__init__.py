@@ -27,6 +27,7 @@ def create_app(config_class=Config):
     # Create tables
     with app.app_context():
         db.create_all()
+        _ensure_columns()
         print("Database tables created/updated!")
 
         # Create default templates
@@ -34,3 +35,35 @@ def create_app(config_class=Config):
         create_default_templates()
 
     return app
+
+
+def _ensure_columns():
+    """Lightweight SQLite migration: add new columns to existing tables
+    without dropping data. Runs ALTER TABLE ADD COLUMN for any column the
+    model defines but the database is missing."""
+    from sqlalchemy import inspect, text
+
+    wanted = {
+        'vehicle': {
+            'route_polyline': 'TEXT',
+            'route_started_at': 'DATETIME',
+            'route_total_seconds': 'FLOAT',
+            'route_real_seconds': 'FLOAT',
+            'route_distance_m': 'FLOAT',
+            'route_dest_lat': 'FLOAT',
+            'route_dest_lng': 'FLOAT',
+        },
+    }
+
+    inspector = inspect(db.engine)
+    existing_tables = inspector.get_table_names()
+
+    for table, columns in wanted.items():
+        if table not in existing_tables:
+            continue
+        present = {col['name'] for col in inspector.get_columns(table)}
+        for name, col_type in columns.items():
+            if name not in present:
+                db.session.execute(text(f'ALTER TABLE {table} ADD COLUMN {name} {col_type}'))
+                print(f"  + added column {table}.{name}")
+        db.session.commit()

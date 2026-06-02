@@ -4,24 +4,24 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Incident #{{ incident.id }} Map - {{ incident.title }}</h2>
     <div>
-        <a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-secondary btn-sm">← All Incidents Map</a>
-        <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary btn-sm">📋 Incident Details</a>
+        <a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> All Incidents</a>
+        <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-circle-info"></i> Incident Details</a>
     </div>
 </div>
 
 <!-- Drawing Tools Panel -->
 <div class="card mb-3">
     <div class="card-header bg-dark text-white">
-        <h5 class="mb-0">✏️ Map Drawing Tools</h5>
+        <h5 class="mb-0"><i class="fa-solid fa-pen-ruler text-muted me-2"></i>Map Drawing Tools</h5>
     </div>
     <div class="card-body">
         <div class="row">
             <div class="col-md-3">
                 <div class="btn-group-vertical w-100">
-                    <button class="btn btn-outline-danger" id="drawFireFrontBtn">🔥 Draw Fire Front</button>
-                    <button class="btn btn-outline-info" id="drawWindBtn">💨 Draw Wind Direction</button>
-                    <button class="btn btn-outline-warning" id="drawPerimeterBtn">📏 Draw Perimeter</button>
-                    <button class="btn btn-outline-secondary" id="clearDrawingBtn">🗑️ Clear Drawing</button>
+                    <button class="btn btn-outline-danger" id="drawFireFrontBtn"><i class="fa-solid fa-fire"></i> Draw Fire Front</button>
+                    <button class="btn btn-outline-secondary" id="drawWindBtn"><i class="fa-solid fa-wind"></i> Draw Wind Direction</button>
+                    <button class="btn btn-outline-warning" id="drawPerimeterBtn"><i class="fa-solid fa-draw-polygon"></i> Draw Perimeter</button>
+                    <button class="btn btn-outline-secondary" id="clearDrawingBtn"><i class="fa-solid fa-trash"></i> Clear Drawing</button>
                 </div>
             </div>
             <div class="col-md-3">
@@ -40,14 +40,14 @@
                     <label class="form-label">Wind Speed (km/h)</label>
                     <input type="number" id="windSpeed" class="form-control" value="0" step="5">
                 </div>
-                <button class="btn btn-primary" id="saveWindBtn">💨 Save Wind Data</button>
+                <button class="btn btn-primary" id="saveWindBtn"><i class="fa-solid fa-wind"></i> Save Wind Data</button>
             </div>
             <div class="col-md-3">
                 <div class="mb-2">
                     <label class="form-label">Annotation Description</label>
                     <textarea id="annotationDesc" class="form-control" rows="2" placeholder="Add description..."></textarea>
                 </div>
-                <button class="btn btn-success w-100" id="saveAnnotationBtn">💾 Save Annotation</button>
+                <button class="btn btn-success w-100" id="saveAnnotationBtn"><i class="fa-solid fa-floppy-disk"></i> Save Annotation</button>
             </div>
         </div>
     </div>
@@ -59,7 +59,7 @@
 <!-- Annotations List -->
 <div class="card mt-3">
     <div class="card-header bg-dark text-white">
-        <h5 class="mb-0">📌 Active Annotations</h5>
+        <h5 class="mb-0"><i class="fa-solid fa-thumbtack text-muted me-2"></i>Active Annotations</h5>
     </div>
     <div class="card-body">
         <div id="annotationsList" class="row">
@@ -214,7 +214,7 @@
                 });
                 var lastPoint = latlngs[latlngs.length - 1];
                 L.marker(lastPoint, {
-                    icon: L.divIcon({ className: 'wind-arrow', html: '➡️', iconSize: [20, 20] })
+                    icon: L.divIcon({ className: 'wind-arrow', html: '<i class="fa-solid fa-arrow-right-long" style="color:' + ann.color + ';font-size:18px;"></i>', iconSize: [20, 20] })
                 }).addTo(map);
             }
             

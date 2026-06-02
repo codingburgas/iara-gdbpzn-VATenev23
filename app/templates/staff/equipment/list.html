@@ -1,28 +1,96 @@
 {% extends "staff/base.html" %}
+{% block page_title %}Equipment{% endblock %}
+{% block topbar_title %}Equipment Inventory{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Equipment Inventory</h2>
+<div class="page-head">
     <div>
-        <a href="{{ url_for('equipment.import_equipment') }}" class="btn btn-info me-2">📦 Import Default Equipment</a>
-        <a href="{{ url_for('equipment.add_equipment') }}" class="btn btn-success">+ Add Equipment</a>
+        <div class="eyebrow">Operations</div>
+        <h1>Equipment Inventory</h1>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('equipment.import_equipment') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-box-open"></i> Import Defaults</a>
+        <a href="{{ url_for('equipment.add_equipment') }}" class="btn btn-primary"><i class="fa-solid fa-circle-plus"></i> Add Equipment</a>
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h6>Total Equipment</h6><h3>{{ equipment|length }}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body"><h6>Available</h6><h3>{{ equipment|selectattr('status', 'equalto', 'available')|list|length }}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-warning"><div class="card-body"><h6>In Use</h6><h3>{{ equipment|selectattr('status', 'equalto', 'in_use')|list|length }}</h3></div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-danger"><div class="card-body"><h6>Maintenance</h6><h3>{{ equipment|selectattr('status', 'in', ['maintenance', 'damaged'])|list|length }}</h3></div></div></div>
+<div class="row g-3 mb-1">
+    <div class="col-6 col-xl-3"><div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+        <div class="stat-icon is-info"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+        <div><div class="stat-label">Total</div><div class="stat-value">{{ equipment|length }}</div></div>
+    </div></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+        <div class="stat-icon is-success"><i class="fa-solid fa-circle-check"></i></div>
+        <div><div class="stat-label">Available</div><div class="stat-value">{{ equipment|selectattr('status', 'equalto', 'available')|list|length }}</div></div>
+    </div></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+        <div class="stat-icon is-warning"><i class="fa-solid fa-rotate"></i></div>
+        <div><div class="stat-label">In Use</div><div class="stat-value">{{ equipment|selectattr('status', 'equalto', 'in_use')|list|length }}</div></div>
+    </div></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+        <div class="stat-icon is-accent"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div><div class="stat-label">Maintenance</div><div class="stat-value">{{ equipment|selectattr('status', 'in', ['maintenance', 'damaged'])|list|length }}</div></div>
+    </div></div></div></div>
 </div>
 
-<div class="card mb-3"><div class="card-body"><div class="row"><div class="col-md-3"><select class="form-select" id="typeFilter"><option value="">All Types</option><option value="tool">🔧 Tools</option><option value="hose">📏 Hoses</option><option value="extinguisher">🧯 Extinguishers</option><option value="gear">🦺 Gear</option><option value="medical">🚑 Medical</option><option value="other">📦 Other</option></select></div><div class="col-md-3"><select class="form-select" id="statusFilter"><option value="">All Status</option><option value="available">✅ Available</option><option value="in_use">🔄 In Use</option><option value="maintenance">🔧 Maintenance</option><option value="damaged">⚠️ Damaged</option></select></div><div class="col-md-3"><select class="form-select" id="vehicleFilter"><option value="">All Vehicles</option><option value="none">Not Assigned</option>{% for v in vehicles %}<option value="{{ v.id }}">{{ v.type }}</option>{% endfor %}</select></div><div class="col-md-3"><input type="text" class="form-control" id="searchInput" placeholder="🔍 Search..."></div></div></div></div>
+<div class="card">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <select class="form-select" id="typeFilter">
+                    <option value="">All Types</option>
+                    <option value="tool">Tools</option>
+                    <option value="hose">Hoses</option>
+                    <option value="extinguisher">Extinguishers</option>
+                    <option value="gear">Gear</option>
+                    <option value="medical">Medical</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="available">Available</option>
+                    <option value="in_use">In Use</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="damaged">Damaged</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="vehicleFilter">
+                    <option value="">All Vehicles</option>
+                    <option value="none">Not Assigned</option>
+                    {% for v in vehicles %}<option value="{{ v.id }}">{{ v.type }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3"><input type="text" class="form-control" id="searchInput" placeholder="Search…"></div>
+        </div>
+    </div>
+</div>
 
-<div class="card"><div class="card-body">
-    <table class="table table-hover"><thead class="table-dark"><tr><th>Name</th><th>Type</th><th>Status</th><th>Condition</th><th>Assigned To</th><th>Last Inspected</th><th>Actions</th></tr></thead>
-    <tbody id="equipmentTable">{% for e in equipment %}<tr class="equipment-row" data-type="{{ e.type }}" data-status="{{ e.status }}" data-vehicle="{{ e.vehicle_id or 'none' }}"><td>{{ e.name }}</td><td>{% if e.type == 'tool' %}🔧{% elif e.type == 'hose' %}📏{% elif e.type == 'extinguisher' %}🧯{% elif e.type == 'gear' %}🦺{% elif e.type == 'medical' %}🚑{% else %}📦{% endif %} {{ e.type|title }}</td><td><span class="badge bg-{% if e.status == 'available' %}success{% elif e.status == 'in_use' %}primary{% elif e.status == 'maintenance' %}warning{% else %}danger{% endif %}">{{ e.status }}</span></td><td><span class="badge bg-{% if e.condition == 'good' %}success{% elif e.condition == 'fair' %}info{% elif e.condition == 'poor' %}warning{% else %}danger{% endif %}">{{ e.condition }}</span></td><td>{% if e.vehicle %}{{ e.vehicle.type }}{% else %}<span class="text-muted">Not assigned</span>{% endif %}</td><td>{% if e.last_inspected %}{{ e.last_inspected.strftime('%d/%m/%Y') }}{% else %}Never{% endif %}</td><td><a href="{{ url_for('equipment.detail', equipment_id=e.id) }}" class="btn btn-sm btn-outline-primary">View</a>{% if e.status == 'available' %}<a href="{{ url_for('equipment.checkout', equipment_id=e.id) }}" class="btn btn-sm btn-outline-success">Check Out</a>{% endif %}</td></tr>{% endfor %}</tbody>
-    </table>
-</div></div>
+<div class="card mb-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Condition</th><th>Assigned To</th><th>Last Inspected</th><th>Actions</th></tr></thead>
+            <tbody id="equipmentTable">
+                {% for e in equipment %}
+                <tr class="equipment-row" data-type="{{ e.type }}" data-status="{{ e.status }}" data-vehicle="{{ e.vehicle_id or 'none' }}">
+                    <td class="fw-semibold">{{ e.name }}</td>
+                    <td class="text-capitalize">{{ e.type }}</td>
+                    <td><span class="badge bg-{% if e.status == 'available' %}success{% elif e.status == 'in_use' %}primary{% elif e.status == 'maintenance' %}warning{% else %}secondary{% endif %}">{{ e.status }}</span></td>
+                    <td><span class="badge bg-{% if e.condition == 'good' %}success{% elif e.condition == 'fair' %}info{% elif e.condition == 'poor' %}warning{% else %}secondary{% endif %}">{{ e.condition }}</span></td>
+                    <td>{% if e.vehicle %}{{ e.vehicle.type }}{% else %}<span class="text-muted">Not assigned</span>{% endif %}</td>
+                    <td class="text-muted">{% if e.last_inspected %}{{ e.last_inspected.strftime('%d/%m/%Y') }}{% else %}Never{% endif %}</td>
+                    <td>
+                        <a href="{{ url_for('equipment.detail', equipment_id=e.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
+                        {% if e.status == 'available' %}<a href="{{ url_for('equipment.checkout', equipment_id=e.id) }}" class="btn btn-sm btn-outline-primary">Check Out</a>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <script>
 function filterTable() {

@@ -3,12 +3,23 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Incident Map</h2>
-    <div>
-        <span class="badge bg-danger me-2">🔥 Fire</span>
-        <span class="badge bg-success me-2">🚑 Rescue</span>
-        <span class="badge bg-warning me-2">🚗 Accident</span>
-        <span class="badge bg-info me-2">🚒 Vehicle</span>
+    <div class="d-flex flex-wrap gap-2">
+        <span class="badge bg-primary">Fire</span>
+        <span class="badge bg-success">Rescue</span>
+        <span class="badge bg-warning">Accident</span>
+        <span class="badge bg-secondary">At Station</span>
+        <span class="badge" style="background:#fd7e14;">En Route</span>
+        <span class="badge bg-danger">On Scene</span>
     </div>
+</div>
+
+<div class="d-flex align-items-center mb-2">
+    <span id="live-indicator" class="badge bg-success me-2">
+        <span class="live-dot"></span> LIVE
+    </span>
+    <small class="text-muted">Last update: <span id="last-update">never</span></small>
+    <small class="ms-3 text-muted">Tracking <span id="vehicle-count">0</span> vehicles</small>
+    <small class="ms-3 text-muted"><span id="enroute-count">0</span> en route</small>
 </div>
 
 <div id="map" style="height: 600px; width: 100%; border-radius: 8px; border: 1px solid #ddd;"></div>
@@ -21,6 +32,23 @@
     .marker-pin { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; background: #c30b82; position: absolute; transform: rotate(-45deg); left: 50%; top: 50%; margin: -15px 0 0 -15px; }
     .marker-pin::after { content: ''; width: 24px; height: 24px; margin: 3px 0 0 3px; background: #fff; position: absolute; border-radius: 50%; }
     .custom-div-icon i { width: 100%; text-align: center; position: absolute; left: 0; right: 0; margin: 0 auto; top: 5px; z-index: 2; }
+
+    .live-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #fff;
+        border-radius: 50%;
+        margin-right: 4px;
+        animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    .vehicle-marker {
+        transition: transform 0.3s ease-out;
+    }
 </style>
 
 <script>
@@ -44,14 +72,21 @@
         });
     }
 
-    var vehicleIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: `<div style="background-color: #17a2b8;" class="marker-pin"></div><i class="fa-solid fa-truck"></i>`,
-        iconSize: [30, 42],
-        iconAnchor: [15, 42]
-    });
+    function getVehicleIcon(status) {
+        let color = '#6c757d';
+        if (status === 'en_route') color = '#fd7e14';
+        else if (status === 'on_scene') color = '#dc3545';
+        else if (status === 'station') color = '#17a2b8';
 
-    // Add incident markers
+        return L.divIcon({
+            className: 'custom-div-icon vehicle-marker',
+            html: `<div style="background-color: ${color};" class="marker-pin"></div><i class="fa-solid fa-truck"></i>`,
+            iconSize: [30, 42],
+            iconAnchor: [15, 42]
+        });
+    }
+
+    // Static incident markers (don't poll these — they don't move)
     {% for incident in incidents %}
         {% if incident.latitude and incident.longitude %}
             L.marker([{{ incident.latitude }}, {{ incident.longitude }}], {
@@ -62,36 +97,167 @@
                 <b>#{{ incident.id }} - {{ incident.title }}</b><br>
                 <span class="badge bg-{% if incident.incident_type == 'fire' %}danger{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %}">
                     {{ incident.incident_type }}
-                </span><br>
+                </span>
                 <span class="badge bg-primary">{{ incident.status }}</span><br>
                 <small>{{ incident.location }}</small><br>
-                <a href="{{ url_for('map.incident_detail_map', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary mt-2">
-                    🎨 Draw on Map
-                </a>
-                <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-sm btn-outline-secondary mt-2">
-                    📋 View Details
-                </a>
+                <a href="{{ url_for('map.incident_detail_map', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary mt-2">Draw</a>
+                <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-sm btn-outline-secondary mt-2">Details</a>
             `);
         {% endif %}
     {% endfor %}
 
-    // Add vehicle markers
-    {% for vehicle in vehicles %}
-        {% if vehicle.latitude and vehicle.longitude %}
-            L.marker([{{ vehicle.latitude }}, {{ vehicle.longitude }}], {
-                icon: vehicleIcon
+    // ===== LIVE VEHICLE TRACKING WITH ROAD ROUTES =====
+    // Each entry: { marker, routeLine, route[], dest, status, location, crew, type,
+    //               baseProgress, baseTime, totalSeconds, realSeconds }
+    var vehicles = {};
+
+    function metersFmt(m) {
+        return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m';
+    }
+    function etaFmt(sec) {
+        sec = Math.max(0, Math.round(sec));
+        var m = Math.floor(sec / 60), s = sec % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    // Point at fractional arc-length along a [[lat,lng],...] polyline.
+    function pointAlong(poly, frac) {
+        if (!poly || poly.length === 0) return null;
+        if (poly.length === 1 || frac <= 0) return poly[0];
+        if (frac >= 1) return poly[poly.length - 1];
+        var seg = [], total = 0;
+        for (var i = 0; i < poly.length - 1; i++) {
+            var d = map.distance(poly[i], poly[i + 1]);
+            seg.push(d); total += d;
+        }
+        if (total === 0) return poly[0];
+        var target = frac * total, acc = 0;
+        for (var j = 0; j < seg.length; j++) {
+            if (acc + seg[j] >= target) {
+                var t = seg[j] ? (target - acc) / seg[j] : 0;
+                return [poly[j][0] + (poly[j + 1][0] - poly[j][0]) * t,
+                        poly[j][1] + (poly[j + 1][1] - poly[j][1]) * t];
+            }
+            acc += seg[j];
+        }
+        return poly[poly.length - 1];
+    }
+
+    function liveProgress(e) {
+        if (e.baseProgress == null) return null;
+        var p = e.baseProgress + (performance.now() - e.baseTime) / 1000 / e.totalSeconds;
+        return Math.min(1, Math.max(0, p));
+    }
+
+    function popupHtml(e) {
+        var crew = e.crew && e.crew.length
+            ? e.crew.map(function (c) { return '- ' + c.name + ' (' + c.rank + ')'; }).join('<br>')
+            : '<em>No crew assigned</em>';
+        var statusBadge = e.status === 'on_scene' ? 'danger' : e.status === 'en_route' ? 'warning' : 'secondary';
+        var html = '<b>' + e.type + '</b><br>'
+            + '<span class="badge bg-' + statusBadge + '">' + e.status.replace('_', ' ') + '</span><br>'
+            + '<small>' + (e.location || '') + '</small>';
+        if (e.baseProgress != null) {
+            var p = liveProgress(e);
+            var etaReal = e.realSeconds * (1 - p);
+            html += '<hr style="margin:6px 0;">'
+                + '<strong>ETA:</strong> ' + etaFmt(etaReal) + ' min<br>'
+                + '<strong>Distance:</strong> ' + metersFmt(e.distance) + '<br>'
+                + '<div style="background:#eee;border-radius:6px;height:6px;margin-top:4px;">'
+                + '<div style="background:#d1342f;height:6px;border-radius:6px;width:' + Math.round(p * 100) + '%;"></div></div>';
+        }
+        html += '<hr style="margin:6px 0;"><strong>Crew:</strong><br>' + crew;
+        return html;
+    }
+
+    // Per-frame animation: move every en-route unit along its road route.
+    function tick() {
+        Object.values(vehicles).forEach(function (e) {
+            if (e.baseProgress == null || !e.route) return;
+            var p = liveProgress(e);
+            var pos = pointAlong(e.route, p);
+            if (pos) e.marker.setLatLng(pos);
+            if (e.marker.isPopupOpen()) e.marker.setPopupContent(popupHtml(e));
+        });
+        requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    function refreshVehicles() {
+        fetch('/api/vehicles/locations')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var seen = new Set();
+                var enroute = 0;
+
+                data.vehicles.forEach(function (v) {
+                    seen.add(v.id);
+                    var e = vehicles[v.id];
+                    if (!e) {
+                        e = vehicles[v.id] = {
+                            marker: L.marker([v.lat, v.lng], { icon: getVehicleIcon(v.status) })
+                                .addTo(map).bindPopup(''),
+                            routeLine: null
+                        };
+                    }
+                    e.type = v.type; e.location = v.location; e.crew = v.crew; e.status = v.status;
+                    e.marker.setIcon(getVehicleIcon(v.status));
+
+                    if (v.route) {
+                        enroute++;
+                        e.route = v.route;
+                        e.dest = v.dest;
+                        e.baseProgress = v.progress;
+                        e.baseTime = performance.now();
+                        e.totalSeconds = v.total_seconds;
+                        e.realSeconds = v.real_seconds;
+                        e.distance = v.distance_m;
+                        // Draw / update the route line.
+                        if (!e.routeLine) {
+                            e.routeLine = L.polyline(v.route, {
+                                color: '#d1342f', weight: 4, opacity: 0.7, dashArray: '8, 8'
+                            }).addTo(map);
+                        } else {
+                            e.routeLine.setLatLngs(v.route);
+                        }
+                        e.marker.setLatLng(pointAlong(v.route, v.progress));
+                    } else {
+                        e.baseProgress = null;
+                        e.route = null;
+                        if (e.routeLine) { map.removeLayer(e.routeLine); e.routeLine = null; }
+                        e.marker.setLatLng([v.lat, v.lng]);
+                    }
+                    e.marker.setPopupContent(popupHtml(e));
+                });
+
+                // Remove vehicles no longer present.
+                Object.keys(vehicles).forEach(function (id) {
+                    if (!seen.has(parseInt(id))) {
+                        var e = vehicles[id];
+                        map.removeLayer(e.marker);
+                        if (e.routeLine) map.removeLayer(e.routeLine);
+                        delete vehicles[id];
+                    }
+                });
+
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                document.getElementById('vehicle-count').textContent = data.vehicles.length;
+                document.getElementById('enroute-count').textContent = enroute;
+                var ind = document.getElementById('live-indicator');
+                ind.className = 'badge bg-success me-2';
+                ind.innerHTML = '<span class="live-dot"></span> LIVE';
             })
-            .addTo(map)
-            .bindPopup(`
-                <b>{{ vehicle.type }}</b><br>
-                <small>{{ vehicle.location }}</small><br>
-                <strong>Crew:</strong><br>
-                {% for f in vehicle.firefighters %}
-                    - {{ f.name }} ({{ f.rank }})<br>
-                {% endfor %}
-            `);
-        {% endif %}
-    {% endfor %}
+            .catch(function (err) {
+                console.error('Vehicle refresh failed:', err);
+                var ind = document.getElementById('live-indicator');
+                ind.className = 'badge bg-danger me-2';
+                ind.innerHTML = 'OFFLINE';
+            });
+    }
+
+    // Poll every 3s to sync progress and pick up new dispatches.
+    refreshVehicles();
+    setInterval(refreshVehicles, 3000);
 </script>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

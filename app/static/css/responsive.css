@@ -1,5 +1,23 @@
 /* Mobile Responsive Styles */
 
+/* ---- App shell: collapse sidebar under 992px ---- */
+@media (max-width: 991.98px) {
+    .sidebar {
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-lg);
+    }
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    .app-shell:has(.sidebar) .app-main,
+    .app-main {
+        margin-left: 0 !important;
+    }
+    .topbar .sidebar-toggle {
+        display: inline-flex !important;
+    }
+}
+
 /* Small devices (phones, 576px and down) */
 @media (max-width: 576px) {
     /* Typography */

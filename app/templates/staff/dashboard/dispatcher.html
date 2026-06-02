@@ -1,91 +1,109 @@
 {% extends "staff/base.html" %}
+{% block page_title %}Dispatcher Dashboard{% endblock %}
+{% block topbar_title %}Dispatcher Dashboard{% endblock %}
 
 {% block content %}
-    <div id="sosAlertBanner" style="display: none;" class="alert alert-danger alert-dismissible fade show">
-    <strong>🚨 SOS ALERT! 🚨</strong> A firefighter has activated an emergency signal.
-    <a href="#" id="sosViewLink" class="alert-link">View on Map</a>
+<div id="sosAlertBanner" style="display:none;" class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-tower-broadcast"></i>
+    <strong>SOS Alert.</strong> A firefighter has activated an emergency signal.
+    <a href="{{ url_for('map.incident_map') }}" id="sosViewLink" class="alert-link">View on map</a>
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 
-<div class="row"><div class="col-12"><h2>Dispatcher Dashboard</h2><hr></div></div>
-<div class="row"><div class="col-12"><h2>Dispatcher Dashboard</h2><hr></div></div>
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <h5 class="card-title">Active Incidents</h5>
-                {% if active_incidents is defined %}
-                    <p class="display-4">{{ active_incidents }}</p>
-                {% else %}
-                    <div class="skeleton skeleton-title mt-2"></div>
-                {% endif %}
-            </div>
-        </div>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Operations</div>
+        <h1>Dispatcher Dashboard</h1>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <h5 class="card-title">Available Units</h5>
-                {% if available_vehicles is defined %}
-                    <p class="display-4">{{ available_vehicles }}</p>
-                {% else %}
-                    <div class="skeleton skeleton-title mt-2"></div>
-                {% endif %}
+    <a href="{{ url_for('incidents.report_incident') }}" class="btn btn-primary">
+        <i class="fa-solid fa-circle-plus"></i> Report Incident
+    </a>
+</div>
+
+<div class="row g-3 mb-2">
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body">
+            <div class="stat-tile">
+                <div class="stat-icon is-accent"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div>
+                    <div class="stat-label">Active Incidents</div>
+                    {% if active_incidents is defined %}
+                        <div class="stat-value">{{ active_incidents }}</div>
+                    {% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}
+                </div>
             </div>
-        </div>
+        </div></div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning">
-            <div class="card-body">
-                <h5 class="card-title">Firefighters</h5>
-                {% if total_firefighters is defined %}
-                    <p class="display-4">{{ total_firefighters }}</p>
-                {% else %}
-                    <div class="skeleton skeleton-title mt-2"></div>
-                {% endif %}
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body">
+            <div class="stat-tile">
+                <div class="stat-icon is-success"><i class="fa-solid fa-truck-fast"></i></div>
+                <div>
+                    <div class="stat-label">Available Units</div>
+                    {% if available_vehicles is defined %}
+                        <div class="stat-value">{{ available_vehicles }}</div>
+                    {% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}
+                </div>
             </div>
-        </div>
+        </div></div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info">
-            <div class="card-body">
-                <h5 class="card-title">Avg Response Time</h5>
-                {% if avg_response_time is defined %}
-                    <p class="display-4">{{ avg_response_time }}</p>
-                    <small>last 30 days</small>
-                {% else %}
-                    <div class="skeleton skeleton-title mt-2"></div>
-                {% endif %}
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body">
+            <div class="stat-tile">
+                <div class="stat-icon is-warning"><i class="fa-solid fa-helmet-safety"></i></div>
+                <div>
+                    <div class="stat-label">Firefighters</div>
+                    {% if total_firefighters is defined %}
+                        <div class="stat-value">{{ total_firefighters }}</div>
+                    {% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}
+                </div>
             </div>
-        </div>
+        </div></div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body">
+            <div class="stat-tile">
+                <div class="stat-icon is-info"><i class="fa-solid fa-stopwatch"></i></div>
+                <div>
+                    <div class="stat-label">Avg Response</div>
+                    {% if avg_response_time is defined %}
+                        <div class="stat-value">{{ avg_response_time }}</div>
+                        <div class="stat-meta">minutes · last 30 days</div>
+                    {% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}
+                </div>
+            </div>
+        </div></div>
     </div>
 </div>
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header bg-dark text-white"><h5>Recent Incidents</h5></div>
-            <div class="card-body">
-                <table class="table table-sm">
+
+<div class="row g-3 mt-1">
+    <div class="col-lg-8">
+        <div class="card mb-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-list-ul text-muted me-2"></i>Recent Incidents</span>
+                <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-sm btn-outline-secondary">View all</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
                     <thead><tr><th>ID</th><th>Type</th><th>Location</th><th>Status</th><th>Time</th></tr></thead>
                     <tbody>
                         {% if recent_incidents %}
                             {% for incident in recent_incidents %}
                             <tr>
-                                <td>#{{ incident.id }}</td>
-                                <td>{{ incident.incident_type }}</td>
-                                <td>{{ incident.location[:30] }}...</td>
-                                <td><span class="badge bg-primary">{{ incident.status }}</span></td>
-                                <td>{{ incident.reported_at.strftime('%H:%M') }}</td>
+                                <td class="fw-semibold">#{{ incident.id }}</td>
+                                <td><span class="text-capitalize">{{ incident.incident_type }}</span></td>
+                                <td>{{ incident.location[:32] }}{% if incident.location|length > 32 %}…{% endif %}</td>
+                                <td>
+                                    {% set s = incident.status %}
+                                    <span class="pill {% if s=='Reported' %}pill-reported{% elif s=='Dispatched' %}pill-dispatched{% elif s=='On Scene' %}pill-onscene{% else %}pill-closed{% endif %}">{{ s }}</span>
+                                </td>
+                                <td class="text-muted">{{ incident.reported_at.strftime('%H:%M') }}</td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             {% for i in range(5) %}
                             <tr>
-                                <td><div class="skeleton skeleton-text"></div></td>
-                                <td><div class="skeleton skeleton-text"></div></td>
-                                <td><div class="skeleton skeleton-text"></div></td>
-                                <td><div class="skeleton skeleton-text"></div></td>
-                                <td><div class="skeleton skeleton-text"></div></td>
+                                <td colspan="5"><div class="skeleton skeleton-text"></div></td>
                             </tr>
                             {% endfor %}
                         {% endif %}
@@ -94,16 +112,20 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card"><div class="card-header bg-dark text-white"><h5>Quick Actions</h5></div><div class="card-body">
-            <a href="{{ url_for('incidents.report_incident') }}" class="btn btn-danger w-100 mb-2">+ New Incident</a>
-            <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-outline-primary w-100 mb-2">View All Incidents</a>
-            <a href="{{ url_for('personnel.list_firefighters') }}" class="btn btn-outline-primary w-100">Manage Resources</a>
-        </div></div>
+    <div class="col-lg-4">
+        <div class="card mb-0">
+            <div class="card-header"><i class="fa-solid fa-bolt text-muted me-2"></i>Quick Actions</div>
+            <div class="card-body d-grid gap-2">
+                <a href="{{ url_for('incidents.report_incident') }}" class="btn btn-primary"><i class="fa-solid fa-circle-plus"></i> New Incident</a>
+                <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-triangle-exclamation"></i> All Incidents</a>
+                <a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-map-location-dot"></i> Live Map</a>
+                <a href="{{ url_for('personnel.list_firefighters') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-helmet-safety"></i> Manage Resources</a>
+            </div>
+        </div>
     </div>
 </div>
-    <script>
-// Check for active SOS alerts
+
+<script>
 function checkActiveSOS() {
     fetch('/staff/sos/active')
         .then(response => response.json())
@@ -113,7 +135,6 @@ function checkActiveSOS() {
             }
         });
 }
-
 setInterval(checkActiveSOS, 30000);
 checkActiveSOS();
 </script>

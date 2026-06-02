@@ -8,7 +8,7 @@
             + Add Task
         </a>
         <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary">
-            ← Back to Incident
+            Back to Incident
         </a>
     </div>
 </div>
@@ -53,7 +53,7 @@
 <!-- Tasks Table -->
 <div class="card">
     <div class="card-header bg-dark text-white">
-        <h5 class="mb-0">📋 Task List</h5>
+        <h5 class="mb-0">Task List</h5>
     </div>
     <div class="card-body">
         {% if tasks %}

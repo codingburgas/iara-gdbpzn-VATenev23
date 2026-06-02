@@ -1,0 +1,232 @@
+{% extends "staff/base.html" %}
+{% block page_title %}Operations Board{% endblock %}
+{% block topbar_title %}Operations Board{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Command</div>
+        <h1>Operations Board</h1>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <span id="ops-live" class="badge bg-success"><span class="live-dot"></span> LIVE</span>
+        <span class="ops-clock" id="ops-clock">--:--:--</span>
+    </div>
+</div>
+
+<!-- SOS strip (only visible when there are active alerts) -->
+<div id="ops-sos-wrap" style="display:none;" class="mb-3"></div>
+
+<!-- KPI row -->
+<div class="row g-3 mb-1">
+    <div class="col-6 col-xl"><div class="ops-kpi"><div class="num" id="kpi-active">0</div><div class="label"><i class="fa-solid fa-triangle-exclamation"></i> Active Incidents</div></div></div>
+    <div class="col-6 col-xl"><div class="ops-kpi"><div class="num text-amber" id="kpi-dispatched">0</div><div class="label"><i class="fa-solid fa-truck-fast"></i> Dispatched</div></div></div>
+    <div class="col-6 col-xl"><div class="ops-kpi"><div class="num text-red" id="kpi-onscene">0</div><div class="label"><i class="fa-solid fa-fire"></i> On Scene</div></div></div>
+    <div class="col-6 col-xl"><div class="ops-kpi"><div class="num text-green" id="kpi-available">0</div><div class="label"><i class="fa-solid fa-circle-check"></i> Units Available</div></div></div>
+    <div class="col-6 col-xl"><div class="ops-kpi"><div class="num text-blue" id="kpi-enroute">0</div><div class="label"><i class="fa-solid fa-route"></i> Units En Route</div></div></div>
+</div>
+
+<div class="row g-3 mt-1">
+    <!-- Active incidents -->
+    <div class="col-lg-8">
+        <div class="ops-panel">
+            <div class="ops-panel-head">
+                <span><i class="fa-solid fa-list-ul me-2"></i>Active Incidents</span>
+                <span class="ops-muted" id="ops-updated">—</span>
+            </div>
+            <div id="ops-incidents">
+                <div class="ops-empty">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fleet status -->
+    <div class="col-lg-4">
+        <div class="ops-panel mb-3">
+            <div class="ops-panel-head"><span><i class="fa-solid fa-truck-fast me-2"></i>Fleet Status</span></div>
+            <div class="p-3" id="ops-fleet"><div class="ops-empty">Loading…</div></div>
+        </div>
+        <div class="ops-panel">
+            <div class="ops-panel-head"><span><i class="fa-solid fa-map-location-dot me-2"></i>Quick Access</span></div>
+            <div class="p-3 d-grid gap-2">
+                <a href="{{ url_for('map.incident_map') }}" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-map"></i> Open Live Map</a>
+                <a href="{{ url_for('incidents.report_incident') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-circle-plus"></i> Report Incident</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ops-clock { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.15rem; color: var(--ink); letter-spacing: 0.02em; }
+    .ops-kpi { background: var(--ink); color: #fff; border-radius: var(--r); padding: 1rem 1.2rem; height: 100%; box-shadow: var(--shadow-sm); }
+    .ops-kpi .num { font-size: 2.3rem; font-weight: 800; line-height: 1; }
+    .ops-kpi .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--on-dark-muted); margin-top: 0.35rem; font-weight: 600; }
+    .text-amber { color: #f0a93b; } .text-red { color: #ff6b63; } .text-green { color: #4ed18a; } .text-blue { color: #6ea8ff; }
+
+    .ops-panel { background: var(--ink); color: var(--on-dark); border-radius: var(--r); box-shadow: var(--shadow-sm); overflow: hidden; }
+    .ops-panel-head { padding: 0.8rem 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 600; color: #fff; display: flex; justify-content: space-between; align-items: center; font-size: 0.92rem; }
+    .ops-muted { color: var(--on-dark-muted); font-size: 0.78rem; font-weight: 500; }
+    .ops-empty { padding: 1.5rem 1.1rem; color: var(--on-dark-muted); }
+
+    .ops-inc { padding: 0.8rem 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .ops-inc:last-child { border-bottom: none; }
+    .ops-inc-top { display: flex; align-items: center; gap: 0.6rem; }
+    .ops-inc-id { font-weight: 700; color: #fff; }
+    .ops-inc-title { color: #fff; font-weight: 600; }
+    .ops-inc-loc { color: var(--on-dark-muted); font-size: 0.8rem; }
+    .ops-type { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; padding: 0.18em 0.6em; border-radius: 999px; }
+    .ops-type.fire { background: rgba(209,52,47,0.22); color: #ff8780; }
+    .ops-type.rescue { background: rgba(31,157,99,0.22); color: #5fd59c; }
+    .ops-type.accident { background: rgba(217,138,23,0.22); color: #f0b65f; }
+    .ops-type.hazmat { background: rgba(217,115,26,0.22); color: #f0a45f; }
+    .ops-type.other { background: rgba(255,255,255,0.14); color: #cdd6e3; }
+
+    .ops-status { font-size: 0.68rem; font-weight: 700; padding: 0.18em 0.6em; border-radius: 999px; margin-left: auto; }
+    .ops-status.Reported { background: rgba(110,168,255,0.2); color: #9cc2ff; }
+    .ops-status.Dispatched { background: rgba(240,169,59,0.2); color: #f0bd6f; }
+    .ops-status.OnScene { background: rgba(209,52,47,0.25); color: #ff8780; }
+
+    .eta-line { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
+    .eta-bar { flex: 1; background: rgba(255,255,255,0.12); border-radius: 999px; height: 6px; overflow: hidden; }
+    .eta-fill { background: var(--accent); height: 6px; border-radius: 999px; width: 0%; transition: width 0.6s linear; }
+    .eta-text { font-size: 0.78rem; color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .eta-unit { font-size: 0.78rem; color: var(--on-dark-muted); white-space: nowrap; }
+
+    .fleet-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .fleet-row:last-child { border-bottom: none; }
+    .fleet-label { display: flex; align-items: center; gap: 0.5rem; color: var(--on-dark); font-size: 0.88rem; }
+    .fleet-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .fleet-count { font-weight: 800; color: #fff; font-size: 1.05rem; }
+
+    .ops-sos { background: var(--accent); color: #fff; border-radius: var(--r); padding: 0.8rem 1.1rem; display: flex; align-items: center; gap: 0.7rem; animation: sosPulse 1.3s infinite; }
+    @keyframes sosPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(209,52,47,0.55); } 50% { box-shadow: 0 0 0 10px rgba(209,52,47,0); } }
+</style>
+
+<script>
+(function () {
+    var liveUnits = {};   // incidentId -> { progress, total, real, baseTime }
+
+    function clk() {
+        document.getElementById('ops-clock').textContent = new Date().toLocaleTimeString();
+    }
+    setInterval(clk, 1000); clk();
+
+    function etaFmt(sec) {
+        sec = Math.max(0, Math.round(sec));
+        var m = Math.floor(sec / 60), s = sec % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+    function statusClass(s) { return s === 'On Scene' ? 'OnScene' : s; }
+
+    function render(data) {
+        document.getElementById('kpi-active').textContent = data.counts.active;
+        document.getElementById('kpi-dispatched').textContent = data.counts.dispatched;
+        document.getElementById('kpi-onscene').textContent = data.counts.on_scene;
+        document.getElementById('kpi-available').textContent = data.fleet.available;
+        document.getElementById('kpi-enroute').textContent = data.fleet.en_route;
+
+        // SOS strip
+        var sosWrap = document.getElementById('ops-sos-wrap');
+        if (data.sos && data.sos.length) {
+            sosWrap.style.display = 'block';
+            sosWrap.innerHTML = data.sos.map(function (s) {
+                return '<div class="ops-sos"><i class="fa-solid fa-tower-broadcast fa-lg"></i>'
+                    + '<div><strong>SOS — ' + s.firefighter + '</strong> '
+                    + (s.message ? '· ' + s.message : '')
+                    + (s.incident_id ? ' · Incident #' + s.incident_id : '') + '</div></div>';
+            }).join('');
+        } else {
+            sosWrap.style.display = 'none';
+            sosWrap.innerHTML = '';
+        }
+
+        // Incidents
+        var box = document.getElementById('ops-incidents');
+        liveUnits = {};
+        if (!data.incidents.length) {
+            box.innerHTML = '<div class="ops-empty">No active incidents. All clear.</div>';
+        } else {
+            box.innerHTML = data.incidents.map(function (i) {
+                var type = (i.type || 'other').toLowerCase();
+                var etaBlock = '';
+                if (i.eta_seconds != null && i.progress != null) {
+                    liveUnits[i.id] = { progress: i.progress, total: i.total_seconds || null,
+                                        real: i.eta_seconds / (1 - (i.progress || 0) || 1), baseTime: performance.now(),
+                                        etaAtPoll: i.eta_seconds };
+                    etaBlock = '<div class="eta-line">'
+                        + '<i class="fa-solid fa-truck-fast eta-unit"></i>'
+                        + '<span class="eta-unit">' + (i.unit || '') + '</span>'
+                        + '<div class="eta-bar"><div class="eta-fill" id="fill-' + i.id + '" style="width:' + Math.round(i.progress * 100) + '%"></div></div>'
+                        + '<span class="eta-text" id="eta-' + i.id + '">ETA ' + etaFmt(i.eta_seconds) + '</span></div>';
+                } else if (i.unit) {
+                    var label = i.unit_status === 'on_scene' ? 'On scene' : (i.status === 'Reported' ? 'Awaiting dispatch' : 'Assigned');
+                    etaBlock = '<div class="eta-line"><i class="fa-solid fa-truck-fast eta-unit"></i>'
+                        + '<span class="eta-unit">' + i.unit + ' · ' + label + '</span></div>';
+                } else {
+                    etaBlock = '<div class="eta-line"><span class="eta-unit">No unit assigned</span></div>';
+                }
+                return '<div class="ops-inc">'
+                    + '<div class="ops-inc-top">'
+                    + '<span class="ops-type ' + type + '">' + type + '</span>'
+                    + '<span class="ops-inc-id">#' + i.id + '</span>'
+                    + '<span class="ops-inc-title">' + i.title + '</span>'
+                    + '<span class="ops-status ' + statusClass(i.status) + '">' + i.status + '</span>'
+                    + '</div>'
+                    + '<div class="ops-inc-loc"><i class="fa-solid fa-location-dot"></i> ' + (i.location || '') + ' · ' + i.reported_at + '</div>'
+                    + etaBlock + '</div>';
+            }).join('');
+        }
+
+        // Fleet
+        var f = data.fleet;
+        document.getElementById('ops-fleet').innerHTML =
+            fleetRow('#4ed18a', 'Available', f.available)
+            + fleetRow('#6ea8ff', 'En route', f.en_route)
+            + fleetRow('#ff6b63', 'On scene', f.on_scene)
+            + fleetRow('#9aa7ba', 'Total fleet', f.total);
+
+        document.getElementById('ops-updated').textContent = 'updated ' + new Date().toLocaleTimeString();
+    }
+
+    function fleetRow(color, label, count) {
+        return '<div class="fleet-row"><span class="fleet-label"><span class="fleet-dot" style="background:' + color + '"></span>' + label + '</span><span class="fleet-count">' + count + '</span></div>';
+    }
+
+    // Smooth ETA countdown between polls.
+    function tickEta() {
+        Object.keys(liveUnits).forEach(function (id) {
+            var u = liveUnits[id];
+            if (u.total == null) return;
+            var p = Math.min(1, u.progress + (performance.now() - u.baseTime) / 1000 / u.total);
+            var fill = document.getElementById('fill-' + id);
+            var eta = document.getElementById('eta-' + id);
+            if (fill) fill.style.width = Math.round(p * 100) + '%';
+            if (eta) {
+                var remaining = u.etaAtPoll * (1 - p) / (1 - u.progress || 1);
+                eta.textContent = 'ETA ' + etaFmt(remaining);
+            }
+        });
+        requestAnimationFrame(tickEta);
+    }
+    requestAnimationFrame(tickEta);
+
+    function poll() {
+        fetch('/api/operations/summary')
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                render(d);
+                var ind = document.getElementById('ops-live');
+                ind.className = 'badge bg-success';
+                ind.innerHTML = '<span class="live-dot"></span> LIVE';
+            })
+            .catch(function () {
+                var ind = document.getElementById('ops-live');
+                ind.className = 'badge bg-danger';
+                ind.textContent = 'OFFLINE';
+            });
+    }
+    poll();
+    setInterval(poll, 3000);
+})();
+</script>
+{% endblock %}

@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, session, redirect, url_for, request
+from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
 from app import db
 from app.models.incident import Incident
 from app.models.user import UserModel
 from app.models.vehicle import Vehicle
 from app.models.firefighter import Firefighter
-from app.utils import login_required, role_required, get_weather
+from app.utils import (login_required, role_required, get_weather,
+                       vehicle_live_position, process_vehicle_arrivals)
 import datetime
 from sqlalchemy import extract, func
 
@@ -15,6 +16,80 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @login_required
 def staff_dashboard():
     return render_template('staff/dashboard/staff.html')
+
+
+@dashboard_bp.route('/staff/operations')
+@login_required
+@role_required('dispatcher', 'commander')
+def operations_board():
+    """Real-time command wall: active incidents, fleet status, live ETAs, SOS."""
+    return render_template('staff/dashboard/operations.html')
+
+
+@dashboard_bp.route('/api/operations/summary')
+@login_required
+@role_required('dispatcher', 'commander')
+def operations_summary():
+    """Aggregated live state for the operations board (polled every few seconds)."""
+    from app.models.communication import SOSAlert
+
+    # Detect arrivals so the board can run standalone.
+    process_vehicle_arrivals()
+
+    active = (Incident.query.filter(Incident.status != 'Closed')
+              .order_by(Incident.reported_at.desc()).all())
+
+    incidents = []
+    for inc in active:
+        unit = inc.assigned_vehicle
+        eta_seconds = None
+        progress = None
+        if unit:
+            live = vehicle_live_position(unit)
+            if live:
+                eta_seconds = live['eta_seconds']
+                progress = live['progress']
+        incidents.append({
+            'id': inc.id,
+            'title': inc.title,
+            'type': inc.incident_type,
+            'location': inc.location,
+            'status': inc.status,
+            'unit': unit.type if unit else None,
+            'unit_status': unit.status if unit else None,
+            'eta_seconds': eta_seconds,
+            'progress': progress,
+            'reported_at': inc.reported_at.strftime('%H:%M') if inc.reported_at else '',
+        })
+
+    vehicles = Vehicle.query.all()
+    fleet = {
+        'total': len(vehicles),
+        'available': sum(1 for v in vehicles if v.status == 'station'),
+        'en_route': sum(1 for v in vehicles if v.status == 'en_route'),
+        'on_scene': sum(1 for v in vehicles if v.status == 'on_scene'),
+    }
+
+    sos_alerts = SOSAlert.query.filter_by(status='active').all()
+    sos = [{
+        'id': s.id,
+        'firefighter': s.firefighter.name if s.firefighter else 'Unknown',
+        'incident_id': s.incident_id,
+        'message': s.message,
+    } for s in sos_alerts]
+
+    return jsonify({
+        'incidents': incidents,
+        'fleet': fleet,
+        'sos': sos,
+        'counts': {
+            'active': len(incidents),
+            'dispatched': sum(1 for i in incidents if i['status'] == 'Dispatched'),
+            'on_scene': sum(1 for i in incidents if i['status'] == 'On Scene'),
+            'reported': sum(1 for i in incidents if i['status'] == 'Reported'),
+        },
+        'server_time': datetime.datetime.utcnow().isoformat(),
+    })
 
 
 @dashboard_bp.route('/dashboard')

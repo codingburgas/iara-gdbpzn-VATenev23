@@ -5,26 +5,26 @@ from wtforms.validators import DataRequired, Optional
 class EquipmentForm(FlaskForm):
     name = StringField('Equipment Name', validators=[DataRequired()])
     type = SelectField('Type',
-                       choices=[('tool', '🔧 Tool'),
-                                ('hose', '📏 Hose'),
-                                ('extinguisher', '🧯 Extinguisher'),
-                                ('gear', '🦺 Protective Gear'),
-                                ('medical', '🚑 Medical Equipment'),
-                                ('other', '📦 Other')],
+                       choices=[('tool', 'Tool'),
+                                ('hose', 'Hose'),
+                                ('extinguisher', 'Extinguisher'),
+                                ('gear', 'Protective Gear'),
+                                ('medical', 'Medical Equipment'),
+                                ('other', 'Other')],
                        validators=[DataRequired()])
     model = StringField('Model', validators=[Optional()])
     serial_number = StringField('Serial Number', validators=[Optional()])
     status = SelectField('Status',
-                        choices=[('available', '✅ Available'),
-                                ('in_use', '🔄 In Use'),
-                                ('maintenance', '🔧 Maintenance'),
-                                ('damaged', '⚠️ Damaged')],
+                        choices=[('available', 'Available'),
+                                ('in_use', 'In Use'),
+                                ('maintenance', 'Maintenance'),
+                                ('damaged', 'Damaged')],
                         validators=[DataRequired()])
     condition = SelectField('Condition',
-                           choices=[('good', '✅ Good'),
-                                   ('fair', '🟡 Fair'),
-                                   ('poor', '🟠 Poor'),
-                                   ('needs_repair', '🔴 Needs Repair')],
+                           choices=[('good', 'Good'),
+                                   ('fair', 'Fair'),
+                                   ('poor', 'Poor'),
+                                   ('needs_repair', 'Needs Repair')],
                            validators=[DataRequired()])
     vehicle_id = SelectField('Assigned Vehicle', coerce=int, validators=[Optional()])
     notes = TextAreaField('Notes', validators=[Optional()])
@@ -41,10 +41,10 @@ class EquipmentCheckoutForm(FlaskForm):
 
 class EquipmentReturnForm(FlaskForm):
     condition = SelectField('Condition After Use',
-                           choices=[('good', '✅ Good'),
-                                   ('fair', '🟡 Fair'),
-                                   ('needs_repair', '🔴 Needs Repair'),
-                                   ('damaged', '⚠️ Damaged')],
+                           choices=[('good', 'Good'),
+                                   ('fair', 'Fair'),
+                                   ('needs_repair', 'Needs Repair'),
+                                   ('damaged', 'Damaged')],
                            validators=[DataRequired()])
     notes = TextAreaField('Notes', validators=[Optional()])
     submit = SubmitField('Return Equipment')

@@ -3,6 +3,8 @@ from flask import flash, redirect, url_for, session, send_file, current_app
 import requests
 import datetime
 import io
+import json
+import math
 from app import db
 from app.models.notification import Notification
 from app.models.equipment import Equipment, EquipmentAssignment
@@ -78,6 +80,191 @@ def geocode_address(address):
     except:
         pass
     return None, None
+
+
+# ========== LIVE ROUTING (OSRM / OpenStreetMap, no API key) ==========
+
+OSRM_BASE = "https://router.project-osrm.org/route/v1/driving"
+# Real driving time is compressed so dispatches are watchable during a demo,
+# while the displayed ETA still reflects the true OSRM travel time.
+ROUTE_SIM_SPEEDUP = 6.0
+ROUTE_MIN_SECONDS = 25.0
+ROUTE_MAX_SECONDS = 150.0
+
+
+def haversine_m(lat1, lng1, lat2, lng2):
+    """Great-circle distance in meters."""
+    R = 6371000.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def get_route(start_lat, start_lng, end_lat, end_lng):
+    """Driving route between two points via OSRM (OpenStreetMap). No API key.
+    Returns {polyline: [[lat,lng],...], duration_seconds, distance_m}.
+    Falls back to a straight line if the routing service is unreachable."""
+    try:
+        url = f"{OSRM_BASE}/{start_lng},{start_lat};{end_lng},{end_lat}"
+        params = {'overview': 'full', 'geometries': 'geojson'}
+        response = requests.get(url, params=params, timeout=6)
+        data = response.json()
+        if data.get('code') == 'Ok' and data.get('routes'):
+            route = data['routes'][0]
+            coords = route['geometry']['coordinates']  # OSRM returns [lng, lat]
+            polyline = [[c[1], c[0]] for c in coords]
+            return {
+                'polyline': polyline,
+                'duration_seconds': float(route['duration']),
+                'distance_m': float(route['distance']),
+            }
+    except Exception as e:
+        print(f"OSRM routing failed, using straight line: {e}")
+
+    dist = haversine_m(start_lat, start_lng, end_lat, end_lng)
+    return {
+        'polyline': [[start_lat, start_lng], [end_lat, end_lng]],
+        'duration_seconds': max(30.0, dist / 1000.0 / 40.0 * 3600.0),  # ~40 km/h estimate
+        'distance_m': dist,
+    }
+
+
+def start_vehicle_route(vehicle, dest_lat, dest_lng):
+    """Compute and store a live road route from the vehicle's current position
+    to a destination and mark it en route. The caller commits the session."""
+    if vehicle.latitude is None or vehicle.longitude is None:
+        vehicle.latitude, vehicle.longitude = 42.5063, 27.4678  # central station default
+
+    route = get_route(vehicle.latitude, vehicle.longitude, dest_lat, dest_lng)
+    real = route['duration_seconds']
+    sim = min(ROUTE_MAX_SECONDS, max(ROUTE_MIN_SECONDS, real / ROUTE_SIM_SPEEDUP))
+
+    vehicle.route_polyline = json.dumps(route['polyline'])
+    vehicle.route_real_seconds = real
+    vehicle.route_total_seconds = sim
+    vehicle.route_distance_m = route['distance_m']
+    vehicle.route_started_at = datetime.datetime.utcnow()
+    vehicle.route_dest_lat = dest_lat
+    vehicle.route_dest_lng = dest_lng
+    vehicle.status = 'en_route'
+    return route
+
+
+def _point_along(poly, frac):
+    """Point at fractional arc-length along a [[lat,lng],...] polyline."""
+    if not poly:
+        return None, None
+    if len(poly) == 1 or frac <= 0:
+        return poly[0][0], poly[0][1]
+    if frac >= 1:
+        return poly[-1][0], poly[-1][1]
+
+    seglen = []
+    total = 0.0
+    for i in range(len(poly) - 1):
+        d = haversine_m(poly[i][0], poly[i][1], poly[i + 1][0], poly[i + 1][1])
+        seglen.append(d)
+        total += d
+    if total == 0:
+        return poly[0][0], poly[0][1]
+
+    target = frac * total
+    acc = 0.0
+    for i, d in enumerate(seglen):
+        if acc + d >= target:
+            t = (target - acc) / d if d else 0
+            lat = poly[i][0] + (poly[i + 1][0] - poly[i][0]) * t
+            lng = poly[i][1] + (poly[i + 1][1] - poly[i][1]) * t
+            return lat, lng
+        acc += d
+    return poly[-1][0], poly[-1][1]
+
+
+def vehicle_live_position(vehicle):
+    """Current interpolated position + progress for an en-route vehicle, based on
+    elapsed wall-clock time. Returns None if the vehicle has no active route."""
+    if not (vehicle.route_polyline and vehicle.route_started_at and vehicle.route_total_seconds):
+        return None
+    elapsed = (datetime.datetime.utcnow() - vehicle.route_started_at).total_seconds()
+    progress = elapsed / vehicle.route_total_seconds if vehicle.route_total_seconds else 1.0
+    progress = max(0.0, min(1.0, progress))
+    poly = json.loads(vehicle.route_polyline)
+    lat, lng = _point_along(poly, progress)
+    eta_real = max(0.0, (vehicle.route_real_seconds or 0) * (1 - progress))
+    return {
+        'lat': lat,
+        'lng': lng,
+        'progress': progress,
+        'eta_seconds': eta_real,
+        'arrived': progress >= 1.0,
+    }
+
+
+def clear_vehicle_route(vehicle):
+    """Wipe live-route fields (e.g. on arrival or when returning to station)."""
+    vehicle.route_polyline = None
+    vehicle.route_started_at = None
+    vehicle.route_total_seconds = None
+    vehicle.route_real_seconds = None
+    vehicle.route_distance_m = None
+    vehicle.route_dest_lat = None
+    vehicle.route_dest_lng = None
+
+
+def process_vehicle_arrivals():
+    """Advance any en-route vehicle that has reached its destination: snap it to
+    the incident, mark it on scene, flip the incident to 'On Scene' and log it.
+
+    Shared by every live endpoint so arrivals are detected by whichever board the
+    user happens to have open. Returns the number of arrivals processed."""
+    from app.models.incident import StatusUpdate
+    from app.models.user import UserModel
+
+    vehicles = Vehicle.query.filter(Vehicle.route_polyline.isnot(None)).all()
+    now = datetime.datetime.utcnow()
+    arrived = 0
+
+    for v in vehicles:
+        live = vehicle_live_position(v)
+        if not live or not live['arrived']:
+            continue
+
+        v.latitude = v.route_dest_lat
+        v.longitude = v.route_dest_lng
+        v.status = 'on_scene'
+
+        inc = v.current_incident
+        if inc:
+            if not inc.on_scene_at:
+                inc.on_scene_at = now
+            if inc.status not in ('On Scene', 'Closed'):
+                old_status = inc.status
+                inc.status = 'On Scene'
+                actor_id = inc.reported_by or inc.updated_by
+                if actor_id is None:
+                    fb = (UserModel.query.filter_by(role='commander').first()
+                          or UserModel.query.first())
+                    actor_id = fb.id if fb else None
+                db.session.add(StatusUpdate(
+                    incident_id=inc.id, user_id=actor_id,
+                    old_status=old_status, new_status='On Scene',
+                    comment=f'{v.type} arrived on scene', timestamp=now))
+                notify_id = inc.reported_by or actor_id
+                if notify_id is not None:
+                    create_notification(
+                        user_id=notify_id,
+                        title=f'Incident #{inc.id} — Unit On Scene',
+                        message=f'{v.type} has arrived on scene',
+                        incident_id=inc.id)
+
+        clear_vehicle_route(v)
+        arrived += 1
+
+    if arrived:
+        db.session.commit()
+    return arrived
 
 
 def get_weather(lat, lon):
@@ -256,7 +443,7 @@ def create_default_templates():
         ('Request Water Supply', 'Requesting additional water supply. Need water tender.', 'request'),
         ('Situation Under Control', 'Situation is under control. Continuing operations.', 'status'),
         ('All Clear', 'All clear. Returning to station.', 'status'),
-        ('🚨 MAYDAY', 'MAYDAY MAYDAY MAYDAY! Firefighter down! Need immediate assistance!', 'emergency'),
+        ('MAYDAY', 'MAYDAY MAYDAY MAYDAY! Firefighter down! Need immediate assistance!', 'emergency'),
         ('Hazmat Situation', 'Hazardous materials detected. Requesting hazmat team.', 'request'),
         ('Medical Emergency', 'Medical emergency at scene. Requesting ambulance.', 'request'),
         ('Command Update', 'Command update: Continuing operations. All units maintain position.', 'general'),

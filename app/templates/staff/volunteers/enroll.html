@@ -1,13 +1,103 @@
 {% extends "staff/base.html" %}
+{% block page_title %}Enroll Volunteers{% endblock %}
+{% block topbar_title %}Training Enrollment{% endblock %}
 
 {% block content %}
-<div class="row"><div class="col-12"><div class="card"><div class="card-header bg-dark text-white"><h4>Enroll Volunteers for: {{ training.title }}</h4><p class="mb-0 text-muted">{{ training.date.strftime('%A, %d %B %Y at %H:%M') }} at {{ training.location }}</p></div><div class="card-body">
-    <div class="row"><div class="col-md-6"><h5>Approved Volunteers</h5><div class="list-group">{% for volunteer in volunteers %}<div class="list-group-item d-flex justify-content-between align-items-center"><div><strong>{{ volunteer.full_name }}</strong><br><small class="text-muted">{{ volunteer.email }} | {{ volunteer.phone }}</small></div><button class="btn btn-sm btn-success" onclick="enroll({{ volunteer.id }}, {{ training.id }})">Enroll</button></div>{% else %}<p class="text-muted">No approved volunteers yet.</p>{% endfor %}</div></div>
-    <div class="col-md-6"><h5>Enrolled Participants</h5><div class="list-group" id="enrolledList">{% if training.participants %}{% for p in training.participants %}<div class="list-group-item"><strong>{% if p.volunteer %}{{ p.volunteer.full_name }}{% else %}Firefighter{% endif %}</strong><span class="badge bg-info float-end">{{ p.status }}</span></div>{% endfor %}{% else %}<p class="text-muted">No participants enrolled yet.</p>{% endif %}</div></div></div>
-    <hr><div class="text-center"><a href="{{ url_for('volunteers.trainings_list') }}" class="btn btn-secondary">Back to Trainings</a></div>
-</div></div></div></div>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Volunteers</div>
+        <h1>Enroll for: {{ training.title }}</h1>
+        <div class="page-sub">{{ training.date.strftime('%A, %d %B %Y at %H:%M') }} · {{ training.location }}</div>
+    </div>
+    <a href="{{ url_for('volunteers.trainings_list') }}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Back to Trainings
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card mb-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-user-check text-muted me-2"></i>Approved Volunteers</span>
+                <span class="badge bg-secondary" id="capacity">{{ training.participants|length }} / {{ training.max_participants }}</span>
+            </div>
+            <div class="card-body">
+                <div class="list-group" id="availableList">
+                    {% for volunteer in volunteers %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center" id="vol-{{ volunteer.id }}">
+                        <div>
+                            <strong>{{ volunteer.full_name }}</strong><br>
+                            <small class="text-muted">{{ volunteer.email }} · {{ volunteer.phone }}</small>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="enroll({{ volunteer.id }}, {{ training.id }}, this)">
+                            <i class="fa-solid fa-plus"></i> Enroll
+                        </button>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0" id="noneLeft">No approved volunteers left to enrol.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-0">
+            <div class="card-header"><i class="fa-solid fa-clipboard-check text-muted me-2"></i>Enrolled Participants</div>
+            <div class="card-body">
+                <div class="list-group" id="enrolledList">
+                    {% if training.participants %}
+                        {% for p in training.participants %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <strong>{% if p.volunteer %}{{ p.volunteer.full_name }}{% else %}Firefighter{% endif %}</strong>
+                            <span class="badge bg-success">{{ p.status }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0" id="noneEnrolled">No participants enrolled yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-function enroll(volunteerId, trainingId) { alert('Enrollment feature coming soon!'); }
+function enroll(volunteerId, trainingId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    fetch('/staff/training/' + trainingId + '/enroll/' + volunteerId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (res) {
+        if (!res.ok || !res.d.success) {
+            alert(res.d.error || 'Could not enrol volunteer.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-plus"></i> Enroll';
+            return;
+        }
+        // Move the volunteer from "Approved" to "Enrolled" without a reload.
+        var row = document.getElementById('vol-' + volunteerId);
+        if (row) row.remove();
+        var noneEnrolled = document.getElementById('noneEnrolled');
+        if (noneEnrolled) noneEnrolled.remove();
+        var item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = '<strong>' + res.d.name + '</strong><span class="badge bg-success">registered</span>';
+        document.getElementById('enrolledList').appendChild(item);
+
+        // Update capacity counter.
+        var cap = document.getElementById('capacity');
+        var parts = cap.textContent.split('/');
+        cap.textContent = (parseInt(parts[0]) + 1) + ' / ' + parts[1].trim();
+    })
+    .catch(function () {
+        alert('Network error, please try again.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-plus"></i> Enroll';
+    });
+}
 </script>
 {% endblock %}

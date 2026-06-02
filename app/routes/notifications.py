@@ -83,7 +83,7 @@ def send_sos():
     for user in users:
         create_notification(
             user_id=user.id,
-            title=f'🚨 MAYDAY! SOS Alert from {firefighter.name}',
+            title=f'MAYDAY! SOS Alert from {firefighter.name}',
             message=f'{message}\nLocation: {latitude}, {longitude}' if latitude else message,
             incident_id=incident_id
         )
@@ -97,7 +97,7 @@ def send_sos():
                 if user and user.id != session.get('user_id'):
                     create_notification(
                         user_id=user.id,
-                        title=f'🚨 SOS ALERT!',
+                        title=f'SOS ALERT!',
                         message=f'Firefighter {firefighter.name} needs immediate assistance at incident #{incident.id}',
                         incident_id=incident_id
                     )
@@ -129,7 +129,7 @@ def resolve_sos(sos_id):
     if user:
         create_notification(
             user_id=user.id,
-            title='✅ SOS Alert Resolved',
+            title='SOS Alert Resolved',
             message='Your SOS alert has been acknowledged. Help is on scene.',
             incident_id=sos.incident_id
         )

@@ -54,9 +54,59 @@ firefighters = [
         "rank": "Firefighter",
         "status": "sick",
         "vehicle_id": None
+    },
+    {
+        "id": 9,
+        "name": "Aleksandar Kolev",
+        "rank": "Driver",
+        "status": "available",
+        "vehicle_id": 104
+    },
+    {
+        "id": 10,
+        "name": "Martin Vasilev",
+        "rank": "Paramedic",
+        "status": "available",
+        "vehicle_id": 105
+    },
+    {
+        "id": 11,
+        "name": "Kaloyan Iliev",
+        "rank": "Firefighter",
+        "status": "available",
+        "vehicle_id": 106
+    },
+    {
+        "id": 12,
+        "name": "Viktor Angelov",
+        "rank": "Driver",
+        "status": "available",
+        "vehicle_id": 107
+    },
+    {
+        "id": 13,
+        "name": "Borislav Marinov",
+        "rank": "Firefighter",
+        "status": "available",
+        "vehicle_id": 108
+    },
+    {
+        "id": 14,
+        "name": "Yordan Stefanov",
+        "rank": "Firefighter",
+        "status": "on_duty",
+        "vehicle_id": 109
+    },
+    {
+        "id": 15,
+        "name": "Emil Petkov",
+        "rank": "Paramedic",
+        "status": "available",
+        "vehicle_id": 110
     }
 ]
 
+# Vehicles are spread across Burgas so dispatch routes look realistic on the map.
 vehicles = [
     {
         "id": 101,
@@ -81,15 +131,15 @@ vehicles = [
         "type": "Command Vehicle",
         "location": "Burgas Central Station",
         "team": [7],
-        "latitude": 42.5063,
-        "longitude": 27.4678,
+        "latitude": 42.5070,
+        "longitude": 27.4690,
         "status": "station"
     },
     {
         "id": 104,
         "type": "Rescue Vehicle",
-        "location": "Burgas Station 2 - Industrial Zone",
-        "team": [],
+        "location": "Station 2 - Industrial Zone",
+        "team": [9],
         "latitude": 42.4815,
         "longitude": 27.4412,
         "status": "station"
@@ -97,10 +147,100 @@ vehicles = [
     {
         "id": 105,
         "type": "Ambulance",
-        "location": "Burgas Station 1",
-        "team": [],
+        "location": "Station 1 - Lazur",
+        "team": [10],
         "latitude": 42.5132,
         "longitude": 27.4628,
+        "status": "station"
+    },
+    {
+        "id": 106,
+        "type": "Fire Engine - Pumper",
+        "location": "Station 3 - Meden Rudnik",
+        "team": [11],
+        "latitude": 42.4699,
+        "longitude": 27.4361,
+        "status": "station"
+    },
+    {
+        "id": 107,
+        "type": "Fire Truck - Heavy Rescue",
+        "location": "Station 4 - Slaveykov",
+        "team": [12],
+        "latitude": 42.5301,
+        "longitude": 27.4520,
+        "status": "station"
+    },
+    {
+        "id": 108,
+        "type": "Fire Engine - Water Tanker",
+        "location": "Station 5 - Port of Burgas",
+        "team": [13],
+        "latitude": 42.4925,
+        "longitude": 27.4760,
+        "status": "station"
+    },
+    {
+        "id": 109,
+        "type": "Hazmat Unit",
+        "location": "Station 2 - Industrial Zone",
+        "team": [14],
+        "latitude": 42.4830,
+        "longitude": 27.4445,
+        "status": "station"
+    },
+    {
+        "id": 110,
+        "type": "Ambulance",
+        "location": "Station 4 - Slaveykov",
+        "team": [15],
+        "latitude": 42.5288,
+        "longitude": 27.4555,
+        "status": "station"
+    },
+    {
+        "id": 111,
+        "type": "Fire Engine - Pumper",
+        "location": "Station 1 - Lazur",
+        "team": [],
+        "latitude": 42.5145,
+        "longitude": 27.4665,
+        "status": "station"
+    },
+    {
+        "id": 112,
+        "type": "Water Tanker - Large",
+        "location": "Station 3 - Meden Rudnik",
+        "team": [],
+        "latitude": 42.4710,
+        "longitude": 27.4390,
+        "status": "station"
+    },
+    {
+        "id": 113,
+        "type": "Command Vehicle",
+        "location": "Station 5 - Port of Burgas",
+        "team": [],
+        "latitude": 42.4940,
+        "longitude": 27.4735,
+        "status": "station"
+    },
+    {
+        "id": 114,
+        "type": "Rescue Vehicle",
+        "location": "Station 4 - Slaveykov",
+        "team": [],
+        "latitude": 42.5275,
+        "longitude": 27.4498,
+        "status": "station"
+    },
+    {
+        "id": 115,
+        "type": "Aerial Platform",
+        "location": "Burgas Central Station",
+        "team": [],
+        "latitude": 42.5055,
+        "longitude": 27.4662,
         "status": "station"
     }
 ]

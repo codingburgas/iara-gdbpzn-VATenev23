@@ -5,7 +5,8 @@ from app.models.vehicle import Vehicle
 from app.models.user import UserModel
 from app.models.firefighter import Firefighter
 from app.forms.incident_forms import IncidentForm, StatusUpdateForm
-from app.utils import login_required, role_required, create_notification, generate_incident_pdf, get_weather
+from app.utils import (login_required, role_required, create_notification, generate_incident_pdf,
+                       get_weather, geocode_address, start_vehicle_route)
 import datetime
 import csv
 from io import StringIO
@@ -88,6 +89,13 @@ def report_incident():
             except:
                 flash('Invalid coordinates format. Using default.', 'warning')
 
+        # If coordinates weren't supplied, geocode the location so the dispatched
+        # unit can be routed to it on the live map.
+        if (lat is None or lon is None) and form.location.data:
+            g_lat, g_lon = geocode_address(form.location.data)
+            if g_lat is not None:
+                lat, lon = g_lat, g_lon
+
         new_incident = Incident(
             title=form.title.data,
             location=form.location.data,
@@ -104,8 +112,19 @@ def report_incident():
         db.session.commit()
 
         vehicle = Vehicle.query.get(form.vehicle_id.data)
-        flash(f'Incident reported successfully! {vehicle.type} has been dispatched.', 'success')
-        return redirect(url_for('incidents.list_incidents'))
+
+        # Dispatch the chosen unit and start its live route to the incident.
+        if vehicle and lat is not None and lon is not None:
+            start_vehicle_route(vehicle, lat, lon)
+            vehicle.current_incident_id = new_incident.id
+            new_incident.status = 'Dispatched'
+            new_incident.dispatched_at = datetime.datetime.utcnow()
+            db.session.commit()
+            flash(f'Incident reported. {vehicle.type} is en route — track it live on the incident map.', 'success')
+            return redirect(url_for('incidents.detail', incident_id=new_incident.id))
+
+        flash(f'Incident reported successfully! {vehicle.type} has been assigned.', 'success')
+        return redirect(url_for('incidents.detail', incident_id=new_incident.id))
 
     return render_template('staff/incidents/report.html', form=form, vehicles=vehicles)
 
@@ -201,6 +220,10 @@ def quick_status_update(incident_id):
     now = datetime.datetime.utcnow()
     if new_status == 'Dispatched' and not incident.dispatched_at:
         incident.dispatched_at = now
+        # Start the live route for the assigned unit.
+        if incident.assigned_vehicle and incident.latitude is not None and incident.longitude is not None:
+            start_vehicle_route(incident.assigned_vehicle, incident.latitude, incident.longitude)
+            incident.assigned_vehicle.current_incident_id = incident.id
     elif new_status == 'On Scene' and not incident.on_scene_at:
         incident.on_scene_at = now
     elif new_status == 'Closed' and not incident.closed_at:
@@ -480,7 +503,7 @@ def request_resource(incident_id):
         for user in users:
             create_notification(
                 user_id=user.id,
-                title=f'📦 New Resource Request',
+                title=f'New Resource Request',
                 message=f'Request for {form.resource_type} at incident #{incident.id}',
                 incident_id=incident.id
             )
@@ -518,7 +541,7 @@ def update_resource_request(request_id):
         # Notify requester
         create_notification(
             user_id=request.requester_id,
-            title=f'📦 Resource Request Updated',
+            title=f'Resource Request Updated',
             message=f'Your request for {request.resource_type} changed from {old_status} to {request.status}',
             incident_id=request.incident_id
         )

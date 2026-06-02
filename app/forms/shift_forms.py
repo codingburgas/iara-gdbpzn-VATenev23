@@ -13,11 +13,11 @@ class ShiftEndForm(FlaskForm):
 
 class FirefighterStatusForm(FlaskForm):
     status = SelectField('Status',
-                        choices=[('available', '✅ Available'),
-                                ('on_duty', '🚒 On Duty'),
-                                ('off_duty', '💤 Off Duty'),
-                                ('training', '📚 Training'),
-                                ('sick', '🤒 Sick'),
-                                ('vacation', '🏖️ Vacation')],
+                        choices=[('available', 'Available'),
+                                ('on_duty', 'On Duty'),
+                                ('off_duty', 'Off Duty'),
+                                ('training', 'Training'),
+                                ('sick', 'Sick'),
+                                ('vacation', 'Vacation')],
                         validators=[DataRequired()])
     submit = SubmitField('Update Status')

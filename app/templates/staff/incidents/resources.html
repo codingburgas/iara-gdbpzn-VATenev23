@@ -8,7 +8,7 @@
             + Request Resource
         </a>
         <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary">
-            ← Back to Incident
+            Back to Incident
         </a>
     </div>
 </div>
@@ -53,7 +53,7 @@
 <!-- Requests Table -->
 <div class="card">
     <div class="card-header bg-dark text-white">
-        <h5 class="mb-0">📦 Resource Requests</h5>
+        <h5 class="mb-0">Resource Requests</h5>
     </div>
     <div class="card-body">
         {% if requests %}
@@ -118,10 +118,10 @@
                                         <div class="mb-3">
                                             <label class="form-label">Status</label>
                                             <select name="status" class="form-select">
-                                                <option value="pending" {% if req.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
-                                                <option value="approved" {% if req.status == 'approved' %}selected{% endif %}>✅ Approved</option>
-                                                <option value="fulfilled" {% if req.status == 'fulfilled' %}selected{% endif %}>📦 Fulfilled</option>
-                                                <option value="rejected" {% if req.status == 'rejected' %}selected{% endif %}>❌ Rejected</option>
+                                                <option value="pending" {% if req.status == 'pending' %}selected{% endif %}>Pending</option>
+                                                <option value="approved" {% if req.status == 'approved' %}selected{% endif %}>Approved</option>
+                                                <option value="fulfilled" {% if req.status == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
+                                                <option value="rejected" {% if req.status == 'rejected' %}selected{% endif %}>Rejected</option>
                                             </select>
                                         </div>
                                         <div class="mb-3">

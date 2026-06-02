@@ -1,63 +1,115 @@
 {% extends "public/base.html" %}
 
-{% block title %}Home - Burgas Fire Department{% endblock %}
+{% block title %}Burgas Fire &amp; Rescue Service{% endblock %}
+
+{% block hero %}
+<section class="public-hero">
+    <div class="container position-relative">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="eyebrow mb-2">Burgas Fire &amp; Rescue Service</div>
+                <h1>Protecting our community,<br>day and night.</h1>
+                <p class="lead mt-3">
+                    Professional emergency response, fire prevention, and public safety
+                    for the people of Burgas — serving without interruption since 1878.
+                </p>
+                <div class="mt-4 d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('public.contact') }}" class="btn btn-primary btn-lg">
+                        <i class="fa-solid fa-headset"></i> Contact Us
+                    </a>
+                    <a href="{{ url_for('public.volunteer') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fa-solid fa-hand-holding-heart"></i> Become a Volunteer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12 text-center mb-5">
-        <h1 class="display-4">Welcome to Burgas Fire Department</h1>
-        <p class="lead">Serving the community since 1878</p>
-    </div>
-</div>
-
-<div class="row mb-5">
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <h3 class="card-title">🔥</h3>
-                <h5>Fire Prevention</h5>
-                <p>Learn how to protect your home and family from fire.</p>
-                <a href="{{ url_for('public.safety_tips') }}" class="btn btn-outline-danger">Learn More</a>
-            </div>
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="feature-card">
+            <div class="feat-icon"><i class="fa-solid fa-house-fire"></i></div>
+            <h5>Fire Prevention</h5>
+            <p>Practical guidance to protect your home, workplace, and family from fire hazards.</p>
+            <a href="{{ url_for('public.safety_tips') }}" class="btn btn-outline-primary btn-sm">View Safety Tips</a>
         </div>
     </div>
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <h3 class="card-title">🚑</h3>
-                <h5>Emergency Services</h5>
-                <p>24/7 emergency response for fires, accidents, and rescues.</p>
-                <a href="{{ url_for('public.contact') }}" class="btn btn-outline-danger">Contact Us</a>
-            </div>
+    <div class="col-md-4">
+        <div class="feature-card">
+            <div class="feat-icon"><i class="fa-solid fa-truck-medical"></i></div>
+            <h5>Emergency Services</h5>
+            <p>Round-the-clock response for fires, road accidents, rescues, and hazardous incidents.</p>
+            <a href="{{ url_for('public.contact') }}" class="btn btn-outline-primary btn-sm">Get in Touch</a>
         </div>
     </div>
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <h3 class="card-title">👥</h3>
-                <h5>Join Our Team</h5>
-                <p>Become a volunteer firefighter and make a difference.</p>
-                <a href="{{ url_for('public.volunteer') }}" class="btn btn-outline-danger">Volunteer</a>
-            </div>
+    <div class="col-md-4">
+        <div class="feature-card">
+            <div class="feat-icon"><i class="fa-solid fa-people-group"></i></div>
+            <h5>Join Our Team</h5>
+            <p>Train as a volunteer firefighter and make a real difference in your community.</p>
+            <a href="{{ url_for('public.volunteer') }}" class="btn btn-outline-primary btn-sm">Apply Now</a>
         </div>
     </div>
 </div>
 
-<div class="row bg-light p-4 rounded">
-    <div class="col-md-6">
-        <h3>Quick Stats</h3>
-        <ul class="list-unstyled">
-            <li>🚒 Active Firefighters: <strong>50+</strong></li>
-            <li>🚑 Emergency Responses: <strong>2,500+</strong> per year</li>
-            <li>🔥 Fires Extinguished: <strong>1,200+</strong> per year</li>
-            <li>🏆 Years of Service: <strong>145+</strong></li>
-        </ul>
+<div class="stat-strip mb-5">
+    <div class="row text-center g-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-num">50+</div>
+            <div class="stat-cap">Active Firefighters</div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-num">2,500+</div>
+            <div class="stat-cap">Responses / Year</div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-num">1,200+</div>
+            <div class="stat-cap">Fires Extinguished</div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-num">145+</div>
+            <div class="stat-cap">Years of Service</div>
+        </div>
     </div>
-    <div class="col-md-6">
-        <h3>Latest News</h3>
-        <p><strong>New Equipment Arrives</strong> - Our department just received a new aerial ladder truck.</p>
-        <p><strong>Fire Safety Week</strong> - Join us for free home safety inspections.</p>
-        <a href="{{ url_for('public.news') }}" class="btn btn-sm btn-outline-primary">Read All News</a>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0">Latest News</h3>
+            <a href="{{ url_for('public.news') }}" class="btn btn-sm btn-outline-secondary">All Updates</a>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="eyebrow">Equipment</div>
+                <h5 class="mt-1 mb-1">New Aerial Ladder Truck Enters Service</h5>
+                <p class="text-muted mb-0 small">Our department has added a modern aerial ladder truck to expand high-rise response capability.</p>
+            </div>
+        </div>
+        <div class="card mb-0">
+            <div class="card-body">
+                <div class="eyebrow">Community</div>
+                <h5 class="mt-1 mb-1">Fire Safety Week — Free Home Inspections</h5>
+                <p class="text-muted mb-0 small">Book a free home safety inspection with our prevention team throughout the week.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <h3 class="mb-3">Need Help?</h3>
+        <div class="card">
+            <div class="card-body">
+                <p class="mb-2"><strong>Emergency</strong></p>
+                <p class="text-muted small mb-3">Life-threatening situations, active fires, accidents.</p>
+                <a href="tel:112" class="btn btn-primary w-100 mb-3"><i class="fa-solid fa-phone"></i> Call 112</a>
+                <hr>
+                <p class="mb-2"><strong>Non-Emergency</strong></p>
+                <p class="text-muted small mb-3">Reports, questions, and general enquiries.</p>
+                <a href="{{ url_for('public.non_emergency') }}" class="btn btn-outline-primary w-100">File a Report</a>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

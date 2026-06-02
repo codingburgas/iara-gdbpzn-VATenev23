@@ -1,78 +1,95 @@
 {% extends "staff/base.html" %}
+{% block page_title %}Commander Dashboard{% endblock %}
+{% block topbar_title %}Commander Dashboard{% endblock %}
 
 {% block content %}
-<div class="row"><div class="col-12 d-flex justify-content-between align-items-center"><h2>Commander Dashboard</h2>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Command</div>
+        <h1>Commander Dashboard</h1>
+    </div>
     {% if weather %}
-    <div class="d-flex align-items-center bg-info text-white p-2 rounded shadow-sm">
-        <img src="https://openweathermap.org/img/wn/{{ weather.icon }}.png" alt="{{ weather.description }}" style="width: 40px;">
-        <div class="ms-2">
-            <span class="fw-bold">{{ weather.temp }}°C</span>
-            <small class="d-block text-capitalize" style="font-size: 0.75rem;">Burgas: {{ weather.description }}</small>
+    <div class="card mb-0" style="min-width:200px;">
+        <div class="card-body d-flex align-items-center gap-2 py-2">
+            <img src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="{{ weather.description }}" style="width:46px;height:46px;">
+            <div>
+                <div class="fw-bold" style="font-size:1.1rem;color:var(--ink);">{{ weather.temp }}°C</div>
+                <small class="text-muted text-capitalize">Burgas · {{ weather.description }}</small>
+            </div>
         </div>
     </div>
     {% endif %}
-</div><hr></div>
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-dark">
-            <div class="card-body">
-                <h6>Total Incidents</h6>
-                {% if stats.total_incidents is defined %}
-                    <h3>{{ stats.total_incidents }}</h3>
-                {% else %}
-                    <div class="skeleton skeleton-title"></div>
-                {% endif %}
-            </div>
-        </div>
+</div>
+
+<div class="row g-3 mb-1">
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+            <div class="stat-icon is-info"><i class="fa-solid fa-layer-group"></i></div>
+            <div><div class="stat-label">Total Incidents</div>
+            {% if stats.total_incidents is defined %}<div class="stat-value">{{ stats.total_incidents }}</div>{% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}</div>
+        </div></div></div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <h6>Active Incidents</h6>
-                {% if stats.active_incidents is defined %}
-                    <h3>{{ stats.active_incidents }}</h3>
-                {% else %}
-                    <div class="skeleton skeleton-title"></div>
-                {% endif %}
-            </div>
-        </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+            <div class="stat-icon is-accent"><i class="fa-solid fa-fire"></i></div>
+            <div><div class="stat-label">Active Incidents</div>
+            {% if stats.active_incidents is defined %}<div class="stat-value">{{ stats.active_incidents }}</div>{% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}</div>
+        </div></div></div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <h6>Available Firefighters</h6>
-                {% if stats.available_firefighters is defined %}
-                    <h3>{{ stats.available_firefighters }}</h3>
-                {% else %}
-                    <div class="skeleton skeleton-title"></div>
-                {% endif %}
-            </div>
-        </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+            <div class="stat-icon is-success"><i class="fa-solid fa-helmet-safety"></i></div>
+            <div><div class="stat-label">Available Crew</div>
+            {% if stats.available_firefighters is defined %}<div class="stat-value">{{ stats.available_firefighters }}</div>{% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}</div>
+        </div></div></div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info">
-            <div class="card-body">
-                <h6>Total Vehicles</h6>
-                {% if stats.total_vehicles is defined %}
-                    <h3>{{ stats.total_vehicles }}</h3>
-                {% else %}
-                    <div class="skeleton skeleton-title"></div>
-                {% endif %}
-            </div>
-        </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card mb-0"><div class="card-body"><div class="stat-tile">
+            <div class="stat-icon is-warning"><i class="fa-solid fa-truck-fast"></i></div>
+            <div><div class="stat-label">Total Vehicles</div>
+            {% if stats.total_vehicles is defined %}<div class="stat-value">{{ stats.total_vehicles }}</div>{% else %}<div class="skeleton skeleton-title mt-2"></div>{% endif %}</div>
+        </div></div></div>
     </div>
 </div>
-<div class="row mb-4">
-    <div class="col-md-6"><div class="card"><div class="card-header bg-dark text-white"><h5>Incidents by Type</h5></div><div class="card-body"><canvas id="incidentTypeChart"></canvas></div></div></div>
-    <div class="col-md-6"><div class="card"><div class="card-header bg-dark text-white"><h5>Incidents Last 6 Months</h5></div><div class="card-body"><canvas id="monthlyChart"></canvas></div></div></div>
+
+<div class="row g-3 mt-1">
+    <div class="col-lg-6">
+        <div class="card mb-0"><div class="card-header"><i class="fa-solid fa-chart-pie text-muted me-2"></i>Incidents by Type</div>
+        <div class="card-body"><canvas id="incidentTypeChart"></canvas></div></div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card mb-0"><div class="card-header"><i class="fa-solid fa-chart-line text-muted me-2"></i>Incidents — Last 6 Months</div>
+        <div class="card-body"><canvas id="monthlyChart"></canvas></div></div>
+    </div>
 </div>
-<div class="row">
-    <div class="col-md-6"><div class="card mb-4"><div class="card-header bg-dark text-white"><h5>Command Actions</h5></div><div class="card-body"><a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-primary w-100 mb-2">View All Incidents</a><a href="{{ url_for('personnel.list_firefighters') }}" class="btn btn-primary w-100 mb-2">Manage Personnel</a><a href="{{ url_for('incidents.export_incidents') }}" class="btn btn-success w-100 mb-2">📥 Export to CSV</a><a href="#" class="btn btn-warning w-100 mb-2">Generate Reports</a><a href="#" class="btn btn-danger w-100">Emergency Alert All Units</a></div></div></div>
-    <div class="col-md-6"><div class="card mb-4"><div class="card-header bg-dark text-white"><h5>System Status</h5></div><div class="card-body"><p><strong>Total Users:</strong> {{ stats.total_users }}</p><p><strong>Response Time Average:</strong> 4:32 minutes</p><p><strong>Units in Field:</strong> {{ stats.units_in_field }}</p><p><strong>Last Incident:</strong> {{ stats.last_incident_time }}</p></div></div></div>
+
+<div class="row g-3 mt-1">
+    <div class="col-lg-6">
+        <div class="card mb-0"><div class="card-header"><i class="fa-solid fa-bolt text-muted me-2"></i>Command Actions</div>
+        <div class="card-body d-grid gap-2">
+            <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-triangle-exclamation"></i> View All Incidents</a>
+            <a href="{{ url_for('personnel.list_firefighters') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-helmet-safety"></i> Manage Personnel</a>
+            <a href="{{ url_for('incidents.export_incidents') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-file-csv"></i> Export to CSV</a>
+            <a href="{{ url_for('dashboard.analytics_dashboard') }}" class="btn btn-primary"><i class="fa-solid fa-chart-line"></i> Full Analytics</a>
+        </div></div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card mb-0"><div class="card-header"><i class="fa-solid fa-server text-muted me-2"></i>System Status</div>
+        <div class="card-body">
+            <table class="table table-sm mb-0">
+                <tr><td class="text-muted">Total Users</td><td class="text-end fw-semibold">{{ stats.total_users }}</td></tr>
+                <tr><td class="text-muted">Units in Field</td><td class="text-end fw-semibold">{{ stats.units_in_field }}</td></tr>
+                <tr><td class="text-muted">Last Incident</td><td class="text-end fw-semibold">{{ stats.last_incident_time }}</td></tr>
+            </table>
+        </div></div>
+    </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-new Chart(document.getElementById('incidentTypeChart'),{type:'pie',data:{labels:['Fire','Rescue','Accident','Hazmat','Other'],datasets:[{data:[{{ stats.fire_count }},{{ stats.rescue_count }},{{ stats.accident_count }},{{ stats.hazmat_count }},{{ stats.other_count }}],backgroundColor:['#dc3545','#28a745','#ffc107','#fd7e14','#6c757d']}]}});
-new Chart(document.getElementById('monthlyChart'),{type:'line',data:{labels:{{ stats.months|tojson }},datasets:[{label:'Incidents',data:{{ stats.monthly_counts|tojson }},borderColor:'#dc3545',backgroundColor:'rgba(220,53,69,0.1)'}]},options:{scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#6b7a90';
+new Chart(document.getElementById('incidentTypeChart'),{type:'doughnut',data:{labels:['Fire','Rescue','Accident','Hazmat','Other'],datasets:[{data:[{{ stats.fire_count }},{{ stats.rescue_count }},{{ stats.accident_count }},{{ stats.hazmat_count }},{{ stats.other_count }}],backgroundColor:['#d1342f','#1f9d63','#d98a17','#d9731a','#5b6878'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom'}},cutout:'62%'}});
+new Chart(document.getElementById('monthlyChart'),{type:'line',data:{labels:{{ stats.months|tojson }},datasets:[{label:'Incidents',data:{{ stats.monthly_counts|tojson }},borderColor:'#d1342f',backgroundColor:'rgba(209,52,47,0.08)',fill:true,tension:0.35,pointBackgroundColor:'#d1342f'}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
 </script>
 {% endblock %}

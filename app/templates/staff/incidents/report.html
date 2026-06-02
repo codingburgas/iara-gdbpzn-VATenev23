@@ -1,36 +1,242 @@
 {% extends "staff/base.html" %}
+{% block page_title %}Report Incident{% endblock %}
+{% block topbar_title %}Report Incident{% endblock %}
 
 {% block content %}
-<h2>Report New Incident</h2>
-<hr>
-<div class="row">
-    <div class="col-md-6">
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            <div class="mb-3">{{ form.title.label(class="form-label") }}{{ form.title(class="form-control") }}</div>
-            <div class="mb-3">{{ form.location.label(class="form-label") }}{{ form.location(class="form-control") }}<small class="text-muted">Street address or intersection</small></div>
-            <div class="row">
-                <div class="col-md-6 mb-3">{{ form.latitude.label(class="form-label") }}{{ form.latitude(class="form-control", placeholder="e.g., 42.5063") }}<small class="text-muted">Optional - for map</small></div>
-                <div class="col-md-6 mb-3">{{ form.longitude.label(class="form-label") }}{{ form.longitude(class="form-control", placeholder="e.g., 27.4678") }}<small class="text-muted">Optional - for map</small></div>
-            </div>
-            <div class="mb-3">{{ form.incident_type.label(class="form-label") }}{{ form.incident_type(class="form-select") }}</div>
-            <div class="mb-3">{{ form.vehicle_id.label(class="form-label") }}{{ form.vehicle_id(class="form-select") }}<small class="text-muted">Select which vehicle to dispatch</small></div>
-            <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows=4) }}</div>
-            {{ form.submit(class="btn btn-danger") }}
-            <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-secondary">Cancel</a>
-        </form>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Incidents</div>
+        <h1>Report New Incident</h1>
     </div>
-    <div class="col-md-6">
-        <div class="card mb-3"><div class="card-header bg-dark text-white"><h5>📍 Available Units</h5></div><div class="card-body">
-            {% if vehicles %}{% for vehicle in vehicles %}
-            <div class="border-bottom mb-3 pb-3">
-                <div class="d-flex justify-content-between"><strong>{{ vehicle.type }}</strong><span class="badge bg-info">ID: {{ vehicle.id }}</span></div>
-                <p class="mb-1"><small>📍 {{ vehicle.location }}</small></p>
-                <p class="mb-1"><small><strong>Crew:</strong></small></p>
-                {% if vehicle.firefighters %}<ul class="list-unstyled ms-2">{% for f in vehicle.firefighters %}<li><small>• {{ f.name }} ({{ f.rank }})<span class="badge {% if f.status == 'available' %}bg-success{% else %}bg-warning{% endif %}">{{ f.status }}</span></small></li>{% endfor %}</ul>{% else %}<p class="text-muted ms-2"><small>No crew assigned</small></p>{% endif %}
-            </div>{% endfor %}{% else %}<p class="text-muted">No vehicles available. <a href="{{ url_for('personnel.import_data') }}">Import data first</a>.</p>{% endif %}
-        </div></div>
-        <div class="card"><div class="card-header bg-dark text-white"><h5>📍 Burgas Coordinates</h5></div><div class="card-body"><p><strong>City Center:</strong> 42.5063, 27.4678</p><p><strong>Central Station:</strong> 42.5132, 27.4628</p><p><strong>Industrial Zone:</strong> 42.4815, 27.4412</p><p><strong>Airport:</strong> 42.5697, 27.5152</p></div></div>
-    </div>
+    <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Cancel
+    </a>
 </div>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="row g-3">
+        <!-- Left: form fields -->
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-circle-info text-muted me-2"></i>Incident Details</div>
+                <div class="card-body">
+                    <div class="mb-3">{{ form.title.label(class="form-label") }}{{ form.title(class="form-control", placeholder="Short title") }}</div>
+                    <div class="mb-3">
+                        {{ form.location.label(class="form-label") }}
+                        {{ form.location(class="form-control", placeholder="Pick on the map or type an address", id="location") }}
+                        <small class="text-muted">Auto-fills when you place the marker</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            {{ form.latitude.label(class="form-label") }}
+                            {{ form.latitude(class="form-control", id="latitude", readonly=true, placeholder="—") }}
+                        </div>
+                        <div class="col-6 mb-3">
+                            {{ form.longitude.label(class="form-label") }}
+                            {{ form.longitude(class="form-control", id="longitude", readonly=true, placeholder="—") }}
+                        </div>
+                    </div>
+                    <div class="mb-3">{{ form.incident_type.label(class="form-label") }}{{ form.incident_type(class="form-select") }}</div>
+                    <div class="mb-3">
+                        {{ form.vehicle_id.label(class="form-label") }}
+                        {{ form.vehicle_id(class="form-select") }}
+                        <small class="text-muted d-block" id="unitHint">This unit will be dispatched and routed live</small>
+                    </div>
+                    <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows=3) }}</div>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: interactive map + units -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fa-solid fa-map-location-dot text-muted me-2"></i>Pin the Location</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="useMyLocation">
+                        <i class="fa-solid fa-location-crosshairs"></i> My location
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control" id="addressSearch" placeholder="Search an address in Burgas…">
+                        <button type="button" class="btn btn-outline-secondary" id="searchBtn"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    </div>
+                    <div id="pickMap" style="height: 360px; width: 100%; border-radius: var(--r-sm);"></div>
+                    <small class="text-muted d-block mt-2">
+                        <i class="fa-solid fa-circle-info"></i>
+                        Click the map or drag the marker to set the exact incident location.
+                    </small>
+                </div>
+            </div>
+
+            <div class="card mb-0">
+                <div class="card-header"><i class="fa-solid fa-truck-fast text-muted me-2"></i>Available Units</div>
+                <div class="card-body" style="max-height: 280px; overflow-y: auto;">
+                    {% if vehicles %}
+                        {% for vehicle in vehicles %}
+                        <div class="border-bottom mb-2 pb-2">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ vehicle.type }}</strong>
+                                <span class="badge bg-secondary">#{{ vehicle.id }}</span>
+                            </div>
+                            <small class="text-muted">{{ vehicle.location }}</small>
+                            {% if vehicle.firefighters %}
+                            <ul class="list-unstyled ms-1 mb-0 mt-1">
+                                {% for f in vehicle.firefighters %}
+                                <li><small>{{ f.name }} ({{ f.rank }}) <span class="badge {% if f.status == 'available' %}bg-success{% else %}bg-warning{% endif %}">{{ f.status }}</span></small></li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}<small class="text-muted ms-1">No crew assigned</small>{% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No vehicles available. <a href="{{ url_for('personnel.import_data') }}">Import data first</a>.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    var BURGAS = [42.5063, 27.4678];
+    var latInput = document.getElementById('latitude');
+    var lngInput = document.getElementById('longitude');
+    var locInput = document.getElementById('location');
+    var vehicleSelect = document.getElementById('vehicle_id');
+    var unitHint = document.getElementById('unitHint');
+
+    // Units available for dispatch (only those sitting at a station are free).
+    var unitData = [
+        {% for v in vehicles %}
+        { id: {{ v.id }}, type: {{ v.type|tojson }},
+          lat: {{ v.latitude if v.latitude is not none else 'null' }},
+          lng: {{ v.longitude if v.longitude is not none else 'null' }},
+          available: {{ 'true' if v.status == 'station' else 'false' }} }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    var userPickedUnit = false;
+    if (vehicleSelect) {
+        vehicleSelect.addEventListener('change', function () { userPickedUnit = true; });
+    }
+
+    function haversineKm(lat1, lng1, lat2, lng2) {
+        var R = 6371, toRad = function (d) { return d * Math.PI / 180; };
+        var dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // Find and (unless overridden) auto-select the closest available unit.
+    function suggestClosest(lat, lng) {
+        if (!vehicleSelect || !unitHint) return;
+        var best = null, bestDist = Infinity;
+        unitData.forEach(function (u) {
+            if (!u.available || u.lat == null || u.lng == null) return;
+            var d = haversineKm(lat, lng, u.lat, u.lng);
+            if (d < bestDist) { bestDist = d; best = u; }
+        });
+        if (!best) {
+            unitHint.innerHTML = '<span class="text-warning">No available units to suggest.</span>';
+            return;
+        }
+        if (!userPickedUnit) vehicleSelect.value = String(best.id);
+        unitHint.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Closest available: <strong>'
+            + best.type + '</strong> — ' + bestDist.toFixed(1) + ' km away'
+            + (userPickedUnit ? ' <span class="text-muted">(you chose a different unit)</span>' : '');
+    }
+
+    var map = L.map('pickMap').setView(BURGAS, 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Use existing form values if the page was re-rendered after a validation error.
+    var startLat = parseFloat(latInput.value) || BURGAS[0];
+    var startLng = parseFloat(lngInput.value) || BURGAS[1];
+    var hasInitial = !!(parseFloat(latInput.value) && parseFloat(lngInput.value));
+
+    var marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
+    if (hasInitial) map.setView([startLat, startLng], 15);
+
+    function setCoords(lat, lng, doReverse) {
+        latInput.value = lat.toFixed(6);
+        lngInput.value = lng.toFixed(6);
+        suggestClosest(lat, lng);
+        if (doReverse) reverseGeocode(lat, lng);
+    }
+
+    // Fill coordinates immediately so there is always a valid pin.
+    setCoords(startLat, startLng, false);
+
+    function reverseGeocode(lat, lng) {
+        var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1';
+        fetch(url, { headers: { 'Accept-Language': 'en' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d && d.display_name) {
+                    // Keep it concise: first 3 comma-parts (road, area, city).
+                    locInput.value = d.display_name.split(',').slice(0, 3).join(',').trim();
+                }
+            })
+            .catch(function () { /* keep whatever the user typed */ });
+    }
+
+    map.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        setCoords(e.latlng.lat, e.latlng.lng, true);
+    });
+
+    marker.on('dragend', function () {
+        var p = marker.getLatLng();
+        setCoords(p.lat, p.lng, true);
+    });
+
+    // Address search (forward geocode).
+    function doSearch() {
+        var q = document.getElementById('addressSearch').value.trim();
+        if (!q) return;
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q);
+        fetch(url, { headers: { 'Accept-Language': 'en' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d && d.length) {
+                    var lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
+                    marker.setLatLng([lat, lng]);
+                    map.setView([lat, lng], 16);
+                    setCoords(lat, lng, false);
+                    locInput.value = d[0].display_name.split(',').slice(0, 3).join(',').trim();
+                } else {
+                    alert('No results for that address.');
+                }
+            })
+            .catch(function () { alert('Address search is unavailable right now.'); });
+    }
+    document.getElementById('searchBtn').addEventListener('click', doSearch);
+    document.getElementById('addressSearch').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+    });
+
+    // Use the browser's geolocation.
+    document.getElementById('useMyLocation').addEventListener('click', function () {
+        if (!navigator.geolocation) { alert('Geolocation is not supported by this browser.'); return; }
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            var lat = pos.coords.latitude, lng = pos.coords.longitude;
+            marker.setLatLng([lat, lng]);
+            map.setView([lat, lng], 16);
+            setCoords(lat, lng, true);
+        }, function () { alert('Could not get your location.'); });
+    });
+
+    // Leaflet needs a nudge when rendered inside a card.
+    setTimeout(function () { map.invalidateSize(); }, 200);
+})();
+</script>
 {% endblock %}

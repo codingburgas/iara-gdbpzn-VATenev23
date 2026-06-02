@@ -1,13 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app import db
 from app.models.firefighter import Firefighter
 from app.models.vehicle import Vehicle
 from app.models.user import UserModel
 from app.models.shift import Shift
 from app.models.incident import Incident
-from app.utils import login_required, role_required, create_notification
+from app.utils import login_required, role_required, create_notification, start_vehicle_route
 import datetime
-from math import radians, sin, cos, sqrt, atan2
 
 firefighters_bp = Blueprint('personnel', __name__)
 
@@ -181,6 +180,27 @@ def update_firefighter_status(firefighter_id):
     return redirect(url_for('personnel.shift_management'))
 
 
+@firefighters_bp.route('/staff/firefighter/my-status', methods=['POST'])
+@login_required
+@role_required('firefighter', 'commander')
+def update_my_status():
+    """Firefighter updates their own availability status from their dashboard."""
+    firefighter = Firefighter.query.filter_by(user_id=session.get('user_id')).first()
+    if not firefighter:
+        return jsonify({'success': False, 'error': 'Firefighter profile not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    new_status = data.get('status')
+
+    allowed = {'available', 'on_break', 'on_duty', 'off_duty'}
+    if new_status not in allowed:
+        return jsonify({'success': False, 'error': 'Invalid status'}), 400
+
+    firefighter.status = new_status
+    db.session.commit()
+    return jsonify({'success': True, 'status': new_status})
+
+
 @firefighters_bp.route('/staff/import-data')
 @login_required
 @role_required('dispatcher', 'commander')
@@ -225,40 +245,6 @@ def import_data():
     return redirect(url_for('personnel.list_firefighters'))
 
 
-@firefighters_bp.route('/staff/vehicle-tracking')
-@login_required
-@role_required('dispatcher', 'commander', 'firefighter')
-def vehicle_tracking():
-    vehicles = Vehicle.query.all()
-    incidents = Incident.query.filter(Incident.status != 'Closed').all()
-
-    return render_template('staff/personnel/vehicle_tracking.html',
-                           vehicles=vehicles,
-                           incidents=incidents)
-
-
-@firefighters_bp.route('/staff/vehicle/<int:vehicle_id>/update-location', methods=['POST'])
-@login_required
-@role_required('dispatcher', 'commander', 'firefighter')
-def update_vehicle_location(vehicle_id):
-    vehicle = Vehicle.query.get_or_404(vehicle_id)
-    data = request.get_json()
-
-    if 'latitude' in data and 'longitude' in data:
-        vehicle.latitude = data['latitude']
-        vehicle.longitude = data['longitude']
-        vehicle.last_updated = datetime.datetime.utcnow()
-
-        if 'status' in data:
-            vehicle.status = data['status']
-
-        db.session.commit()
-
-        return {'success': True, 'message': f'{vehicle.type} location updated'}
-
-    return {'error': 'Missing coordinates'}, 400
-
-
 @firefighters_bp.route('/staff/vehicle/<int:vehicle_id>/assign-incident/<int:incident_id>', methods=['POST'])
 @login_required
 @role_required('dispatcher', 'commander')
@@ -266,8 +252,13 @@ def assign_vehicle_to_incident(vehicle_id, incident_id):
     vehicle = Vehicle.query.get_or_404(vehicle_id)
     incident = Incident.query.get_or_404(incident_id)
 
-    vehicle.status = 'en_route'
     vehicle.current_incident_id = incident.id
+
+    # Start a live road route if we know where the incident is.
+    if incident.latitude is not None and incident.longitude is not None:
+        start_vehicle_route(vehicle, incident.latitude, incident.longitude)
+    else:
+        vehicle.status = 'en_route'
 
     if not incident.assigned_vehicle_id:
         incident.assigned_vehicle_id = vehicle.id
@@ -287,37 +278,3 @@ def assign_vehicle_to_incident(vehicle_id, incident_id):
             )
 
     return redirect(url_for('incidents.detail', incident_id=incident_id))
-
-
-@firefighters_bp.route('/staff/vehicle/<int:vehicle_id>/eta/<int:incident_id>')
-@login_required
-def calculate_eta(vehicle_id, incident_id):
-    vehicle = Vehicle.query.get_or_404(vehicle_id)
-    incident = Incident.query.get_or_404(incident_id)
-
-    if not vehicle.latitude or not vehicle.longitude or not incident.latitude or not incident.longitude:
-        return {'eta': 'N/A', 'error': 'Missing coordinates'}
-
-    R = 6371
-
-    lat1 = radians(vehicle.latitude)
-    lon1 = radians(vehicle.longitude)
-    lat2 = radians(incident.latitude)
-    lon2 = radians(incident.longitude)
-
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-
-    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-    distance = R * c
-
-    speed = vehicle.speed or 60
-    eta_minutes = (distance / speed) * 60
-
-    return {
-        'distance': round(distance, 1),
-        'eta_minutes': round(eta_minutes, 1),
-        'eta_text': f"{int(eta_minutes)} min" if eta_minutes < 60 else f"{int(eta_minutes / 60)}h {int(eta_minutes % 60)}min"
-    }

@@ -21,11 +21,11 @@ class IncidentForm(FlaskForm):
 
 class StatusUpdateForm(FlaskForm):
     new_status = SelectField('New Status',
-                            choices=[('Reported', '🚨 Reported'),
-                                    ('Dispatched', '🚒 Dispatched'),
-                                    ('On Scene', '🔥 On Scene'),
-                                    ('Contained', '📦 Contained'),
-                                    ('Closed', '✅ Closed')],
+                            choices=[('Reported', 'Reported'),
+                                    ('Dispatched', 'Dispatched'),
+                                    ('On Scene', 'On Scene'),
+                                    ('Contained', 'Contained'),
+                                    ('Closed', 'Closed')],
                             validators=[DataRequired()])
     comment = TextAreaField('Comment (optional)', validators=[Optional()])
     submit = SubmitField('Update Status')
@@ -34,10 +34,10 @@ class TaskForm(FlaskForm):
     description = TextAreaField('Description', validators=[Optional()])
     assigned_to = SelectField('Assign To', coerce=int, validators=[Optional()])
     priority = SelectField('Priority',
-                          choices=[('low', '🟢 Low'),
-                                   ('normal', '🔵 Normal'),
-                                   ('high', '🟠 High'),
-                                   ('urgent', '🔴 Urgent')],
+                          choices=[('low', 'Low'),
+                                   ('normal', 'Normal'),
+                                   ('high', 'High'),
+                                   ('urgent', 'Urgent')],
                           validators=[DataRequired()])
     deadline = StringField('Deadline (YYYY-MM-DD HH:MM)', validators=[Optional()])
     notes = TextAreaField('Notes', validators=[Optional()])
@@ -46,20 +46,20 @@ class TaskForm(FlaskForm):
 
 class TaskStatusForm(FlaskForm):
     status = SelectField('Status',
-                        choices=[('pending', '⏳ Pending'),
-                                 ('in_progress', '🔄 In Progress'),
-                                 ('completed', '✅ Completed'),
-                                 ('cancelled', '❌ Cancelled')],
+                        choices=[('pending', 'Pending'),
+                                 ('in_progress', 'In Progress'),
+                                 ('completed', 'Completed'),
+                                 ('cancelled', 'Cancelled')],
                         validators=[DataRequired()])
     notes = TextAreaField('Completion Notes', validators=[Optional()])
     submit = SubmitField('Update Status')
 
 class MapAnnotationForm(FlaskForm):
     annotation_type = SelectField('Annotation Type',
-                                  choices=[('fire_front', '🔥 Fire Front'),
-                                           ('wind', '💨 Wind Direction'),
-                                           ('perimeter', '📏 Perimeter'),
-                                           ('hotspot', '⚠️ Hotspot')],
+                                  choices=[('fire_front', 'Fire Front'),
+                                           ('wind', 'Wind Direction'),
+                                           ('perimeter', 'Perimeter'),
+                                           ('hotspot', 'Hotspot')],
                                   validators=[DataRequired()])
     color = StringField('Color', validators=[Optional()])
     description = TextAreaField('Description', validators=[Optional()])
@@ -67,30 +67,30 @@ class MapAnnotationForm(FlaskForm):
 
 class ResourceRequestForm(FlaskForm):
     resource_type = SelectField('Resource Type',
-                                choices=[('water', '💧 Water'),
-                                         ('fuel', '⛽ Fuel'),
-                                         ('equipment', '🔧 Equipment'),
-                                         ('personnel', '👥 Personnel'),
-                                         ('medical', '🚑 Medical Supplies'),
-                                         ('other', '📦 Other')],
+                                choices=[('water', 'Water'),
+                                         ('fuel', 'Fuel'),
+                                         ('equipment', 'Equipment'),
+                                         ('personnel', 'Personnel'),
+                                         ('medical', 'Medical Supplies'),
+                                         ('other', 'Other')],
                                 validators=[DataRequired()])
     quantity = StringField('Quantity', validators=[Optional()])
     description = TextAreaField('Description', validators=[DataRequired()])
     priority = SelectField('Priority',
-                          choices=[('low', '🟢 Low'),
-                                   ('normal', '🔵 Normal'),
-                                   ('high', '🟠 High'),
-                                   ('urgent', '🔴 Urgent')],
+                          choices=[('low', 'Low'),
+                                   ('normal', 'Normal'),
+                                   ('high', 'High'),
+                                   ('urgent', 'Urgent')],
                           validators=[DataRequired()])
     submit = SubmitField('Submit Request')
 
 
 class ResourceRequestResponseForm(FlaskForm):
     status = SelectField('Status',
-                        choices=[('pending', '⏳ Pending'),
-                                 ('approved', '✅ Approved'),
-                                 ('fulfilled', '📦 Fulfilled'),
-                                 ('rejected', '❌ Rejected')],
+                        choices=[('pending', 'Pending'),
+                                 ('approved', 'Approved'),
+                                 ('fulfilled', 'Fulfilled'),
+                                 ('rejected', 'Rejected')],
                         validators=[DataRequired()])
     notes = TextAreaField('Notes', validators=[Optional()])
     submit = SubmitField('Update Request')
