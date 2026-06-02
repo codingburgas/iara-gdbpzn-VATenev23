@@ -1,0 +1,284 @@
+{% extends "public/base.html" %}
+{% block title %}Live Operations · Burgas Fire &amp; Rescue{% endblock %}
+
+{% block hero %}
+<section class="live-hero">
+    <div class="container position-relative">
+        <div class="row align-items-end g-3">
+            <div class="col-lg-7">
+                <div class="eyebrow mb-2">Transparency · Real-time service</div>
+                <h1 class="mb-2">Live Operations</h1>
+                <p class="lead mb-0">
+                    See where your fire &amp; rescue service is responding right now.
+                    Updated every few seconds; no personal information is shown.
+                </p>
+            </div>
+            <div class="col-lg-5">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="live-kpi">
+                            <div class="num" id="kpi-incidents">—</div>
+                            <div class="label">Active Incidents</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="live-kpi">
+                            <div class="num" id="kpi-units">—</div>
+                            <div class="label">Units Deployed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 mt-1">
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center mb-2 gap-3">
+            <span id="live-pill" class="badge bg-success"><span class="live-dot"></span> LIVE</span>
+            <small class="text-muted">Last update <span id="last-update">never</span></small>
+            <small class="text-muted ms-auto">© OpenStreetMap contributors</small>
+        </div>
+        <div id="liveMap" style="height: 540px; width: 100%; border-radius: var(--r); box-shadow: var(--shadow-sm);"></div>
+        <div class="d-flex gap-3 align-items-center mt-2 small text-muted flex-wrap">
+            <span><span class="legend-dot" style="background:#d1342f;"></span> Fire</span>
+            <span><span class="legend-dot" style="background:#1f9d63;"></span> Rescue</span>
+            <span><span class="legend-dot" style="background:#d98a17;"></span> Accident</span>
+            <span><span class="legend-dot" style="background:#d9731a;"></span> Hazmat</span>
+            <span><span class="legend-dot" style="background:#fd7e14;"></span> Unit en route</span>
+            <span><span class="legend-dot" style="background:#5b6878;"></span> Unit on scene</span>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-list-ul text-muted me-2"></i>Active Incidents</span>
+                <small class="text-muted">live</small>
+            </div>
+            <div id="incidentList" style="max-height: 540px; overflow-y: auto;">
+                <p class="text-muted small p-3 mb-0">Loading…</p>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-3 small mb-0">
+            <strong><i class="fa-solid fa-shield"></i> Privacy notice.</strong>
+            This page shows the type, status and approximate location of active incidents only.
+            Names, vehicle identifiers and operational detail are not published.
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    .live-hero {
+        background: linear-gradient(135deg, #131c2b 0%, #1d2b44 60%, #2a1f24 100%);
+        color: #fff;
+        padding: 4rem 0 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .live-hero::after {
+        content: "";
+        position: absolute; right: -150px; top: -80px;
+        width: 380px; height: 380px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(209,52,47,0.32), transparent 70%);
+        pointer-events: none;
+    }
+    .live-hero h1 { color: #fff; font-size: 2.6rem; font-weight: 800; line-height: 1.1; }
+    .live-hero .lead { color: var(--on-dark-muted); font-size: 1.05rem; max-width: 540px; }
+    .live-hero .eyebrow { color: #ff8780; }
+
+    .live-kpi {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: var(--r);
+        padding: 1rem 1.1rem;
+        backdrop-filter: blur(4px);
+    }
+    .live-kpi .num { font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1; }
+    .live-kpi .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--on-dark-muted); font-weight: 700; margin-top: 0.3rem; }
+
+    .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.35rem; vertical-align: middle; }
+    .live-dot { display: inline-block; width: 8px; height: 8px; background: #fff; border-radius: 50%; margin-right: 0.25rem; animation: liveBeat 1.2s infinite; }
+    @keyframes liveBeat { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    .inc-row { padding: 0.7rem 1.1rem; border-bottom: 1px solid var(--border); }
+    .inc-row:last-child { border-bottom: none; }
+    .inc-row .top { display: flex; align-items: center; gap: 0.5rem; }
+    .inc-type { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; padding: 0.18em 0.55em; border-radius: 999px; color: #fff; }
+    .inc-type.fire { background: #d1342f; }
+    .inc-type.rescue { background: #1f9d63; }
+    .inc-type.accident { background: #d98a17; }
+    .inc-type.hazmat { background: #d9731a; }
+    .inc-type.other { background: #5b6878; }
+    .inc-status { margin-left: auto; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+    .inc-loc { color: var(--text-2); font-size: 0.86rem; margin-top: 0.15rem; }
+    .inc-time { color: var(--muted); font-size: 0.78rem; }
+
+    /* leaflet markers (reuse existing pin look) */
+    .pub-pin { width: 26px; height: 26px; border-radius: 50% 50% 50% 0; position: absolute; transform: rotate(-45deg); left: 50%; top: 50%; margin: -13px 0 0 -13px; box-shadow: 0 2px 4px rgba(0,0,0,0.25); }
+    .pub-pin::after { content: ''; width: 18px; height: 18px; margin: 4px 0 0 4px; background: #fff; position: absolute; border-radius: 50%; }
+    .pub-icon { background: transparent; border: none; }
+</style>
+
+<script>
+(function () {
+    var map = L.map('liveMap').setView([42.5063, 27.4678], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    function pin(color) {
+        return L.divIcon({
+            className: 'pub-icon',
+            html: '<div class="pub-pin" style="background:' + color + ';"></div>',
+            iconSize: [26, 36], iconAnchor: [13, 36]
+        });
+    }
+    var typeColor = { fire:'#d1342f', rescue:'#1f9d63', accident:'#d98a17', hazmat:'#d9731a', other:'#5b6878' };
+    var statusColor = { en_route:'#fd7e14', on_scene:'#5b6878' };
+
+    var incMarkers = {};
+    var unitState = [];   // [{ marker, routeLine, route, baseProgress, baseTime, total }]
+    var bounds = null;
+
+    function relTime(iso) {
+        if (!iso) return '';
+        var t = new Date(iso); var diff = (Date.now() - t.getTime()) / 1000;
+        if (diff < 60) return Math.round(diff) + 's ago';
+        if (diff < 3600) return Math.round(diff / 60) + ' min ago';
+        return Math.round(diff / 3600) + ' h ago';
+    }
+
+    function pointAlong(poly, frac) {
+        if (!poly || !poly.length) return null;
+        if (poly.length === 1 || frac <= 0) return poly[0];
+        if (frac >= 1) return poly[poly.length - 1];
+        var seg = [], total = 0;
+        for (var i = 0; i < poly.length - 1; i++) { var d = map.distance(poly[i], poly[i + 1]); seg.push(d); total += d; }
+        if (!total) return poly[0];
+        var target = frac * total, acc = 0;
+        for (var j = 0; j < seg.length; j++) {
+            if (acc + seg[j] >= target) {
+                var t = seg[j] ? (target - acc) / seg[j] : 0;
+                return [poly[j][0] + (poly[j+1][0] - poly[j][0]) * t,
+                        poly[j][1] + (poly[j+1][1] - poly[j][1]) * t];
+            }
+            acc += seg[j];
+        }
+        return poly[poly.length - 1];
+    }
+
+    // Smooth between polls.
+    function tick() {
+        unitState.forEach(function (u) {
+            if (u.baseProgress == null || !u.route) return;
+            var p = Math.min(1, u.baseProgress + (performance.now() - u.baseTime) / 1000 / u.total);
+            var pos = pointAlong(u.route, p);
+            if (pos) u.marker.setLatLng(pos);
+        });
+        requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    function renderIncidents(list) {
+        var box = document.getElementById('incidentList');
+        if (!list.length) {
+            box.innerHTML = '<p class="text-muted small p-3 mb-0">No active incidents. All clear.</p>';
+            return;
+        }
+        box.innerHTML = list.map(function (i) {
+            var t = (i.type || 'other').toLowerCase();
+            return '<div class="inc-row">'
+                 + '<div class="top">'
+                 +   '<span class="inc-type ' + t + '">' + t + '</span>'
+                 +   '<span class="inc-status">' + i.status + '</span>'
+                 + '</div>'
+                 + '<div class="inc-loc"><i class="fa-solid fa-location-dot text-muted"></i> ' + (i.location || 'Location undisclosed') + '</div>'
+                 + '<div class="inc-time">Reported ' + relTime(i.reported_at) + '</div>'
+                 + '</div>';
+        }).join('');
+    }
+
+    function refresh() {
+        fetch('/api/public/operations')
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                document.getElementById('kpi-incidents').textContent = d.stats.active_incidents;
+                document.getElementById('kpi-units').textContent = d.stats.units_deployed;
+
+                // ----- incident markers -----
+                var seen = new Set();
+                var pts = [];
+                d.incidents.forEach(function (i) {
+                    if (i.lat == null || i.lng == null) return;
+                    seen.add(i.id); pts.push([i.lat, i.lng]);
+                    var color = typeColor[(i.type || 'other').toLowerCase()] || typeColor.other;
+                    if (incMarkers[i.id]) {
+                        incMarkers[i.id].setLatLng([i.lat, i.lng]).setIcon(pin(color));
+                    } else {
+                        incMarkers[i.id] = L.marker([i.lat, i.lng], { icon: pin(color) })
+                            .addTo(map)
+                            .bindPopup('<strong>' + (i.type || 'Incident').toUpperCase() + '</strong><br>'
+                                       + (i.location || '') + '<br><small class="text-muted">Reported ' + relTime(i.reported_at) + '</small>');
+                    }
+                });
+                Object.keys(incMarkers).forEach(function (id) {
+                    if (!seen.has(parseInt(id))) { map.removeLayer(incMarkers[id]); delete incMarkers[id]; }
+                });
+
+                // ----- unit markers -----
+                // Rebuild the unit layer each tick (small set, simpler).
+                unitState.forEach(function (u) {
+                    if (u.routeLine) map.removeLayer(u.routeLine);
+                    if (u.marker) map.removeLayer(u.marker);
+                });
+                unitState = [];
+                d.units.forEach(function (u) {
+                    if (u.lat == null || u.lng == null) return;
+                    pts.push([u.lat, u.lng]);
+                    var color = statusColor[u.status] || '#5b6878';
+                    var marker = L.marker([u.lat, u.lng], { icon: pin(color) })
+                        .addTo(map)
+                        .bindPopup('<strong>Fire &amp; Rescue Unit</strong><br><small>' + u.status.replace('_',' ') + '</small>');
+                    var entry = { marker: marker, route: null, routeLine: null, baseProgress: null, baseTime: 0, total: 1 };
+                    if (u.route) {
+                        entry.route = u.route;
+                        entry.baseProgress = u.progress;
+                        entry.baseTime = performance.now();
+                        entry.total = u.total_seconds || 60;
+                        entry.routeLine = L.polyline(u.route, { color: '#fd7e14', weight: 3, opacity: 0.55, dashArray: '6,8' }).addTo(map);
+                    }
+                    unitState.push(entry);
+                });
+
+                // First-load auto-fit, then leave the user in control.
+                if (!bounds && pts.length) {
+                    bounds = L.latLngBounds(pts).pad(0.25);
+                    map.fitBounds(bounds, { maxZoom: 14 });
+                }
+
+                renderIncidents(d.incidents);
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                var pill = document.getElementById('live-pill');
+                pill.className = 'badge bg-success';
+                pill.innerHTML = '<span class="live-dot"></span> LIVE';
+            })
+            .catch(function () {
+                var pill = document.getElementById('live-pill');
+                pill.className = 'badge bg-secondary';
+                pill.textContent = 'OFFLINE';
+            });
+    }
+
+    refresh();
+    setInterval(refresh, 4000);
+})();
+</script>
+{% endblock %}

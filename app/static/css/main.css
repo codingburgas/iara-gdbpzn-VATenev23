@@ -387,6 +387,18 @@ body.sidebar-open .sidebar-backdrop { display: block; }
 .public-nav .navbar-brand small { display: block; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
 .public-nav .nav-link { color: var(--text-2); font-weight: 500; font-size: 0.9rem; padding: 0.5rem 0.95rem; border-radius: 7px; }
 .public-nav .nav-link:hover { color: var(--accent); background: var(--accent-soft); }
+.public-nav .nav-live-link { display: inline-flex; align-items: center; gap: 0.4rem; }
+.live-dot-tiny {
+    display: inline-block; width: 8px; height: 8px;
+    background: var(--accent); border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(209,52,47,0.55);
+    animation: navLive 1.4s infinite;
+}
+@keyframes navLive {
+    0% { box-shadow: 0 0 0 0 rgba(209,52,47,0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(209,52,47,0); }
+    100% { box-shadow: 0 0 0 0 rgba(209,52,47,0); }
+}
 
 /* Hero */
 .public-hero {
