@@ -4,6 +4,7 @@ from app.models.incident import Incident, StatusUpdate
 from app.models.vehicle import Vehicle
 from app.models.user import UserModel
 from app.models.firefighter import Firefighter
+from app.models.communication import Message, SOSAlert
 from app.forms.incident_forms import IncidentForm, StatusUpdateForm
 from app.utils import (login_required, role_required, create_notification, generate_incident_pdf,
                        get_weather, geocode_address, start_vehicle_route, release_incident_units)
@@ -12,6 +13,107 @@ import csv
 from io import StringIO
 
 incidents_bp = Blueprint('incidents', __name__)
+
+
+def build_incident_timeline(incident):
+    """Merge every recorded event on an incident into one chronological feed.
+
+    Sources: the report itself, StatusUpdate rows, silent milestones (e.g.
+    auto-dispatch at report time writes timestamps but no StatusUpdate),
+    tasks, radio traffic, emergency messages and SOS alerts.
+    """
+    events = []
+
+    def add(ts, icon, tone, title, body=None, actor=None):
+        if ts:
+            events.append({'ts': ts, 'icon': icon, 'tone': tone,
+                           'title': title, 'body': body, 'actor': actor})
+
+    add(incident.reported_at, 'fa-bullhorn', 'reported', 'Incident reported',
+        incident.description,
+        incident.reporter.username if incident.reporter else None)
+
+    updates = StatusUpdate.query.filter_by(incident_id=incident.id).all()
+    logged_statuses = {u.new_status for u in updates}
+    status_style = {
+        'Reported':   ('fa-bullhorn', 'reported'),
+        'Dispatched': ('fa-truck-fast', 'dispatched'),
+        'On Scene':   ('fa-fire', 'onscene'),
+        'Contained':  ('fa-shield-halved', 'success'),
+        'Closed':     ('fa-flag-checkered', 'closed'),
+    }
+    for u in updates:
+        icon, tone = status_style.get(u.new_status, ('fa-pen', 'closed'))
+        add(u.timestamp, icon, tone,
+            f'Status changed: {u.old_status} → {u.new_status}',
+            u.comment, u.user.username if u.user else 'System')
+
+    if incident.dispatched_at and 'Dispatched' not in logged_statuses:
+        unit = incident.assigned_vehicle.type if incident.assigned_vehicle else 'Unit'
+        add(incident.dispatched_at, 'fa-truck-fast', 'dispatched',
+            f'{unit} dispatched', 'Unit routed to the incident location', 'System')
+    if incident.on_scene_at and 'On Scene' not in logged_statuses:
+        add(incident.on_scene_at, 'fa-fire', 'onscene', 'Units arrived on scene',
+            None, 'System')
+    if incident.closed_at and 'Closed' not in logged_statuses:
+        add(incident.closed_at, 'fa-flag-checkered', 'closed', 'Incident closed',
+            None, 'System')
+
+    for t in incident.tasks:
+        add(t.created_at, 'fa-list-check', 'dispatched',
+            f'Task created: {t.title}', t.description,
+            t.creator.username if t.creator else None)
+        if t.completed_at:
+            add(t.completed_at, 'fa-circle-check', 'success',
+                f'Task completed: {t.title}', None,
+                t.completer.username if t.completer else None)
+
+    for m in Message.query.filter_by(incident_id=incident.id).all():
+        if m.message_type == 'radio':
+            add(m.created_at, 'fa-walkie-talkie', 'closed', 'Radio transmission',
+                m.message, m.user.username if m.user else None)
+        elif m.is_emergency:
+            add(m.created_at, 'fa-triangle-exclamation', 'danger',
+                'Emergency message', m.message,
+                m.user.username if m.user else None)
+
+    for s in SOSAlert.query.filter_by(incident_id=incident.id).all():
+        ff = s.firefighter.name if s.firefighter else 'Firefighter'
+        add(s.created_at, 'fa-tower-broadcast', 'danger',
+            f'SOS alert from {ff}', s.message, ff)
+        if s.resolved_at:
+            add(s.resolved_at, 'fa-circle-check', 'success', 'SOS alert resolved',
+                None, s.resolver.username if s.resolver else None)
+
+    events.sort(key=lambda e: e['ts'], reverse=True)
+    return events
+
+
+def incident_response_metrics(incident):
+    """Key durations of the incident lifecycle, formatted for display."""
+    def fmt(delta):
+        secs = int(delta.total_seconds())
+        if secs < 0:
+            return None
+        if secs < 3600:
+            return f'{secs // 60}m {secs % 60:02d}s'
+        return f'{secs // 3600}h {(secs % 3600) // 60:02d}m'
+
+    metrics = []
+    if incident.reported_at and incident.dispatched_at:
+        v = fmt(incident.dispatched_at - incident.reported_at)
+        if v:
+            metrics.append(('Time to dispatch', v))
+    if incident.dispatched_at and incident.on_scene_at:
+        v = fmt(incident.on_scene_at - incident.dispatched_at)
+        if v:
+            metrics.append(('Travel time', v))
+    if incident.reported_at:
+        end = incident.closed_at or datetime.datetime.utcnow()
+        v = fmt(end - incident.reported_at)
+        if v:
+            metrics.append(('Total duration' if incident.closed_at else 'Ongoing for', v))
+    return metrics
 
 
 @incidents_bp.route('/staff/incidents')
@@ -134,7 +236,6 @@ def report_incident():
 def detail(incident_id):
     incident = Incident.query.get_or_404(incident_id)
     form = StatusUpdateForm()
-    status_history = StatusUpdate.query.filter_by(incident_id=incident_id).order_by(StatusUpdate.timestamp.desc()).all()
 
     if form.validate_on_submit():
         if form.new_status.data != incident.status:
@@ -192,7 +293,8 @@ def detail(incident_id):
     return render_template('staff/incidents/detail.html',
                            incident=incident,
                            form=form,
-                           status_history=status_history,
+                           timeline=build_incident_timeline(incident),
+                           response_metrics=incident_response_metrics(incident),
                            weather=weather)
 
 

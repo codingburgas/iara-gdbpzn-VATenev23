@@ -175,6 +175,65 @@ a { text-decoration: none; }
 .bg-type-hazmat { background-color: #d9731a !important; }
 
 /* ============================================================
+   Incident timeline (audit log on incident detail)
+   ============================================================ */
+.timeline {
+    position: relative;
+    padding-left: 0.25rem;
+}
+.tl-item {
+    position: relative;
+    display: flex;
+    gap: 0.9rem;
+    padding-bottom: 1.1rem;
+}
+.tl-item:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 17px;
+    top: 36px;
+    bottom: 0;
+    width: 2px;
+    background: var(--line, #e3e8ef);
+}
+.tl-dot {
+    flex: 0 0 36px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    z-index: 1;
+}
+.tl-reported   { background: var(--info-soft);    color: #1d4e80; }
+.tl-dispatched { background: #e8eefc;             color: #2746b8; }
+.tl-onscene    { background: var(--warning-soft); color: #8a570b; }
+.tl-closed     { background: #eceff3;             color: #5a6678; }
+.tl-success    { background: var(--success-soft); color: #137045; }
+.tl-danger     { background: var(--danger-soft);  color: var(--accent-dark); }
+.tl-body {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface-2);
+    border-radius: var(--r-sm);
+    padding: 0.6rem 0.85rem;
+}
+.tl-comment {
+    font-size: 0.875rem;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+.tl-metric {
+    font-size: 0.78rem;
+    background: var(--surface-2);
+    border-radius: 999px;
+    padding: 0.25rem 0.7rem;
+    color: var(--text-2);
+    white-space: nowrap;
+}
+
+/* ============================================================
    Skeleton loading
    ============================================================ */
 .skeleton {

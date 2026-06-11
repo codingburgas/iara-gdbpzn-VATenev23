@@ -147,26 +147,34 @@
 <div class="row mt-3">
     <div class="col-12">
         <div class="card mb-0">
-            <div class="card-header"><i class="fa-solid fa-clock-rotate-left text-muted me-2"></i>Status History</div>
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="fa-solid fa-clock-rotate-left text-muted me-2"></i>Incident Timeline</span>
+                {% if response_metrics %}
+                <div class="d-flex gap-2 flex-wrap">
+                    {% for label, value in response_metrics %}
+                    <span class="tl-metric"><i class="fa-regular fa-clock me-1"></i>{{ label }}: <strong>{{ value }}</strong></span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
             <div class="card-body">
-                {% if status_history %}
-                    {% for update in status_history %}
-                    <div class="mb-3">
-                        <div class="d-flex">
-                            <div class="me-3">
-                                {% set ns = update.new_status %}
-                                <span class="pill {% if ns=='Reported' %}pill-reported{% elif ns=='Dispatched' %}pill-dispatched{% elif ns=='On Scene' %}pill-onscene{% elif ns=='Closed' %}pill-closed{% else %}pill-danger{% endif %}">{{ ns }}</span>
+                {% if timeline %}
+                <div class="timeline">
+                    {% for ev in timeline %}
+                    <div class="tl-item">
+                        <div class="tl-dot tl-{{ ev.tone }}"><i class="fa-solid {{ ev.icon }}"></i></div>
+                        <div class="tl-body">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-1">
+                                <strong>{{ ev.title }}</strong>
+                                <small class="text-muted text-nowrap">{{ ev.ts.strftime('%H:%M:%S · %d %b %Y') }}</small>
                             </div>
-                            <div>
-                                <p class="mb-0"><strong>{{ update.user.username if update.user else 'System' }}</strong> changed from {{ update.old_status }} to {{ update.new_status }}</p>
-                                {% if update.comment %}<p class="mb-0 text-muted"><small>"{{ update.comment }}"</small></p>{% endif %}
-                                <small class="text-muted">{{ update.timestamp.strftime('%H:%M %d/%m/%Y') }}</small>
-                            </div>
+                            {% if ev.body %}<p class="mb-1 text-muted tl-comment">{{ ev.body }}</p>{% endif %}
+                            {% if ev.actor %}<small class="text-muted"><i class="fa-regular fa-user me-1"></i>{{ ev.actor }}</small>{% endif %}
                         </div>
-                        {% if not loop.last %}<hr class="my-2">{% endif %}
                     </div>
                     {% endfor %}
-                {% else %}<p class="text-muted mb-0">No status updates yet.</p>{% endif %}
+                </div>
+                {% else %}<p class="text-muted mb-0">No events recorded yet.</p>{% endif %}
             </div>
         </div>
     </div>

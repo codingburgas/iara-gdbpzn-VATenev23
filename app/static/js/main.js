@@ -48,8 +48,13 @@ window.onbeforeunload = function() {
 // Notification count update
 function updateNotificationCount() {
     fetch('/staff/notifications/count')
-        .then(response => response.json())
+        .then(response => {
+            // Not logged in: the endpoint redirects to the login page (HTML).
+            if (!response.ok || response.redirected) return null;
+            return response.json();
+        })
         .then(data => {
+            if (!data) return;
             const badge = document.getElementById('notification-badge');
             if (badge) {
                 if (data.count > 0) {
