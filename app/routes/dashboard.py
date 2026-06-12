@@ -55,6 +55,8 @@ def operations_summary():
             'type': inc.incident_type,
             'location': inc.location,
             'status': inc.status,
+            'is_major': bool(inc.is_major),
+            'parent_id': inc.parent_incident_id,
             'unit': unit.type if unit else None,
             'unit_status': unit.status if unit else None,
             'eta_seconds': eta_seconds,

@@ -12,6 +12,93 @@ import datetime
 firefighters_bp = Blueprint('personnel', __name__)
 
 
+# ========== PERFORMANCE SCORE (Module 17) ==========
+def compute_performance(firefighter, days=30):
+    """Score a firefighter from existing operational data — no extra tables.
+
+    Points: +10 per incident their unit responded to, +5 per completed task
+    (+2 on-time bonus, -2 late), -3 per overdue pending task, +1 per shift
+    hour in the window (capped at 40), -5 per SOS alert they raised."""
+    from app.models.task import Task
+    from app.models.communication import SOSAlert
+
+    now = datetime.datetime.utcnow()
+    window_start = now - datetime.timedelta(days=days)
+
+    # Incidents the firefighter's unit was dispatched to.
+    incidents_responded = 0
+    if firefighter.vehicle_id:
+        incidents_responded = Incident.query.filter(
+            Incident.assigned_vehicle_id == firefighter.vehicle_id,
+            Incident.dispatched_at.isnot(None)
+        ).count()
+
+    # Tasks
+    completed_tasks = Task.query.filter_by(assigned_to=firefighter.id, status='completed').all()
+    on_time = sum(1 for t in completed_tasks
+                  if t.deadline and t.completed_at and t.completed_at <= t.deadline)
+    late = sum(1 for t in completed_tasks
+               if t.deadline and t.completed_at and t.completed_at > t.deadline)
+    overdue_pending = Task.query.filter(
+        Task.assigned_to == firefighter.id,
+        Task.status.in_(['pending', 'in_progress']),
+        Task.deadline.isnot(None),
+        Task.deadline < now
+    ).count()
+
+    # Shift hours inside the window
+    shift_hours = 0.0
+    for s in firefighter.shifts:
+        if s.end_time and s.start_time >= window_start:
+            shift_hours += (s.end_time - s.start_time).total_seconds() / 3600
+    shift_hours = round(min(shift_hours, 40.0), 1)
+
+    sos_count = SOSAlert.query.filter_by(firefighter_id=firefighter.id).count()
+
+    score = (incidents_responded * 10
+             + len(completed_tasks) * 5 + on_time * 2 - late * 2
+             - overdue_pending * 3
+             + int(shift_hours)
+             - sos_count * 5)
+
+    if score >= 80:
+        band, band_class = 'Elite', 'success'
+    elif score >= 50:
+        band, band_class = 'Strong', 'primary'
+    elif score >= 20:
+        band, band_class = 'Developing', 'warning'
+    else:
+        band, band_class = 'Building', 'secondary'
+
+    return {
+        'score': score,
+        'band': band,
+        'band_class': band_class,
+        'incidents': incidents_responded,
+        'tasks_done': len(completed_tasks),
+        'on_time': on_time,
+        'late': late,
+        'overdue': overdue_pending,
+        'shift_hours': shift_hours,
+        'sos': sos_count,
+    }
+
+
+@firefighters_bp.route('/staff/performance')
+@login_required
+@role_required('commander')
+def performance_leaderboard():
+    """Commander leaderboard ranking firefighters by operational performance."""
+    days = request.args.get('days', 30, type=int)
+    rows = []
+    for f in Firefighter.query.all():
+        perf = compute_performance(f, days=days)
+        rows.append({'firefighter': f, 'perf': perf})
+    rows.sort(key=lambda r: r['perf']['score'], reverse=True)
+
+    return render_template('staff/personnel/performance.html', rows=rows, days=days)
+
+
 @firefighters_bp.route('/staff/firefighters')
 @login_required
 @role_required('dispatcher', 'commander')

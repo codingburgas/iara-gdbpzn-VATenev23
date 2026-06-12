@@ -75,7 +75,16 @@
                 {% for incident in incidents %}
                 <tr>
                     <td class="fw-semibold">#{{ incident.id }}</td>
-                    <td>{{ incident.title }}</td>
+                    <td>
+                        {{ incident.title }}
+                        {% if incident.is_major %}
+                        <span class="badge bg-danger ms-1" title="{{ incident.children|length }} linked incident(s)">MAJOR{% if incident.children %} · {{ incident.children|length }}{% endif %}</span>
+                        {% elif incident.parent %}
+                        <a href="{{ url_for('incidents.detail', incident_id=incident.parent.id) }}" class="badge bg-secondary ms-1 text-decoration-none" title="Part of Major Incident #{{ incident.parent.id }}">
+                            <i class="fa-solid fa-sitemap"></i> #{{ incident.parent.id }}
+                        </a>
+                        {% endif %}
+                    </td>
                     <td>{{ incident.location }}</td>
                     <td><span class="badge bg-{% if incident.incident_type == 'fire' %}primary{% elif incident.incident_type == 'rescue' %}success{% elif incident.incident_type == 'accident' %}warning{% else %}secondary{% endif %} text-capitalize">{{ incident.incident_type }}</span></td>
                     <td>

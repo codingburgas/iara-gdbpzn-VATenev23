@@ -6,12 +6,35 @@
 <div class="page-head">
     <div>
         <div class="eyebrow">Incident #{{ incident.id }}</div>
-        <h1>{{ incident.title }}</h1>
+        <h1>
+            {{ incident.title }}
+            {% if incident.is_major %}
+            <span class="badge bg-danger align-middle ms-2" style="font-size:0.55em; letter-spacing:0.08em;">
+                <i class="fa-solid fa-star-of-life"></i> MAJOR INCIDENT
+            </span>
+            {% endif %}
+        </h1>
     </div>
     <a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-outline-secondary">
         <i class="fa-solid fa-arrow-left"></i> Back to Incidents
     </a>
 </div>
+
+{% if incident.parent %}
+<div class="alert alert-warning d-flex align-items-center justify-content-between">
+    <span>
+        <i class="fa-solid fa-sitemap me-1"></i>
+        This incident is part of <strong>Major Incident
+        <a href="{{ url_for('incidents.detail', incident_id=incident.parent.id) }}" class="alert-link">#{{ incident.parent.id }} — {{ incident.parent.title }}</a></strong>.
+        All units here report under that command.
+    </span>
+    {% if session.user_role == 'commander' %}
+    <form method="POST" action="{{ url_for('incidents.unlink_child', incident_id=incident.id) }}" class="ms-3">
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Unlink</button>
+    </form>
+    {% endif %}
+</div>
+{% endif %}
 
 <div class="row g-3">
     <div class="col-lg-8">
@@ -39,6 +62,60 @@
                 <div class="mt-2"><h6>Description</h6><div class="p-3 rounded" style="background:var(--surface-2);">{{ incident.description }}</div></div>
             </div>
         </div>
+
+        {% if incident.is_major %}
+        <div class="card" style="border-left: 3px solid var(--accent);">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-sitemap text-muted me-2"></i>Major Incident Command</span>
+                <span class="badge bg-danger">{{ incident.children|length }} linked incident(s)</span>
+            </div>
+            <div class="card-body">
+                {% if incident.children %}
+                <div class="table-responsive mb-3">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>ID</th><th>Title</th><th>Type</th><th>Status</th><th>Unit</th><th></th></tr></thead>
+                        <tbody>
+                            {% for child in incident.children %}
+                            <tr>
+                                <td class="fw-semibold">#{{ child.id }}</td>
+                                <td><a href="{{ url_for('incidents.detail', incident_id=child.id) }}">{{ child.title|truncate(28) }}</a></td>
+                                <td class="text-capitalize">{{ child.incident_type }}</td>
+                                <td>
+                                    {% set cs = child.status %}
+                                    <span class="pill {% if cs=='Reported' %}pill-reported{% elif cs=='Dispatched' %}pill-dispatched{% elif cs=='On Scene' %}pill-onscene{% elif cs=='Closed' %}pill-closed{% else %}pill-danger{% endif %}">{{ cs }}</span>
+                                </td>
+                                <td>{{ child.assigned_vehicle.type|truncate(20) if child.assigned_vehicle else '—' }}</td>
+                                <td>
+                                    {% if session.user_role == 'commander' %}
+                                    <form method="POST" action="{{ url_for('incidents.unlink_child', incident_id=child.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Unlink"><i class="fa-solid fa-link-slash"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No incidents linked yet. Link related incidents so all units report under this command.</p>
+                {% endif %}
+
+                {% if session.user_role == 'commander' and linkable %}
+                <form method="POST" action="{{ url_for('incidents.link_child', incident_id=incident.id) }}" class="d-flex gap-2">
+                    <select name="child_id" class="form-select" style="max-width: 380px;">
+                        {% for inc in linkable %}
+                        <option value="{{ inc.id }}">#{{ inc.id }} — {{ inc.title|truncate(40) }} ({{ inc.status }})</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-link"></i> Link Incident</button>
+                </form>
+                {% elif session.user_role == 'commander' %}
+                <p class="text-muted small mb-0">No open incidents available to link.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         {% if incident.latitude and incident.longitude %}
         <div class="card">
@@ -139,6 +216,13 @@
                 </div>
                 <a href="{{ url_for('communications.radio_log', incident_id=incident.id) }}" class="btn btn-outline-secondary"><i class="fa-solid fa-walkie-talkie"></i> Radio Log</a>
                 <a href="{{ url_for('incidents.incident_resources', incident_id=incident.id) }}" class="btn btn-outline-secondary"><i class="fa-solid fa-box"></i> Request Resources</a>
+                {% if session.user_role == 'commander' and not incident.is_major and not incident.parent and incident.status != 'Closed' %}
+                <hr class="my-1">
+                <form method="POST" action="{{ url_for('incidents.declare_major', incident_id=incident.id) }}"
+                      onsubmit="return confirm('Declare incident #{{ incident.id }} a MAJOR INCIDENT?\n\nRelated incidents can then be linked under this command.');">
+                    <button type="submit" class="btn btn-danger w-100"><i class="fa-solid fa-star-of-life"></i> Declare Major Incident</button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </div>

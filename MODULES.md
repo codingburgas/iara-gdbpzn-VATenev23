@@ -5,8 +5,17 @@ Sorted roughly easiest → hardest. All fit inside the existing Flask/SQLite sta
 
 ---
 
-## Already done this session
+## Already done
 - **[DONE]** Firefighter "Available / On Break" buttons — wired to real backend (was fake `alert()`)
+- **[DONE]** Module 2-ish — auto On-Scene on arrival with timestamps + status history entry
+- **[DONE]** Module 13 — Real-Time GPS tracker, upgraded far beyond spec: real OSRM road routes, live ETA, animated units (`/staff/map`)
+- **[DONE]** Module 14 — Incident timeline / audit log on detail page (with response metrics)
+- **[DONE]** Module 17 — Firefighter Performance Score: scoring engine in `app/routes/firefighters.py` (`compute_performance`), commander leaderboard at `/staff/performance` with podium + full breakdown table + 30/90/365-day switcher
+- **[DONE]** Module 18 — Major Incident mode: `is_major` + `parent_incident_id` on Incident, declare/link/unlink flows (commander), command card on detail page, MAJOR badges on list + Operations Board
+- **[BONUS]** Operations Board command wall (`/staff/operations`)
+- **[BONUS]** Public live operations map (`/live`) with privacy-filtered API
+- **[BONUS]** Interactive map picker + closest-unit suggestion on incident report
+- **[BONUS]** Crew status auto-sync on dispatch/close
 
 ---
 
@@ -119,6 +128,41 @@ Adds a `parent_incident_id` field and changes how the dispatcher dashboard group
 - **P6** — Confirm dialog before closing/deleting anything (currently some deletes have no confirmation)
 - **P7** — "Last seen" timestamp on firefighter profiles (updated on every login)
 - **P8** — Add a favicon (fire emoji or 🚒) so the browser tab looks right during a demo
+
+---
+
+## 🆕 New ideas (added June 2026)
+
+### 19. Incident Replay Mode
+Time-scrubber on a closed incident's map: replay the dispatch as it happened —
+unit leaves station, drives the stored route, arrives, status flips — all from
+`StatusUpdate` timestamps + the saved route polyline. Like a sports replay for
+post-incident review. Pure frontend over existing data. **~3 h, demo gold.**
+
+### 20. Hydrant Map Layer
+Seed ~20 hydrant locations around Burgas (new tiny model or static JSON).
+Toggleable layer on the Live Map + "nearest hydrant: 140 m NE" hint on the
+incident detail map. Real fire-service workflow. **~2 h.**
+
+### 21. Shift Handover Report
+When a firefighter ends a shift, auto-generate a handover summary: incidents
+during the shift, tasks completed, equipment still checked out. Shown on screen
++ downloadable PDF (ReportLab already installed). **~2 h.**
+
+### 22. Risk Clock (hour × weekday heat matrix)
+Analytics widget: a 24×7 grid showing when incidents cluster (e.g. Friday
+18:00 hotspot). Plain CSS grid colored by count — no chart library needed.
+Commanders use this for staffing arguments. **~1.5 h.**
+
+### 23. Equipment Inspection Alerts
+`next_inspection` already exists on Equipment but nothing reads it. Add an
+"Inspections due" card on the equipment page + a count badge in the sidebar,
+and block checkout of overdue items until re-inspected. **~1 h.**
+
+### 24. Station Coverage Rings
+On the Live Map, draw 5/10-minute response-time rings around each station
+(circles sized from average urban driving speed, or true OSRM isochrones if
+ambitious). Instantly shows coverage gaps in the city. **~2 h.**
 
 ---
 

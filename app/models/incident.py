@@ -24,10 +24,17 @@ class Incident(db.Model):
     last_updated = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     updated_by = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=True)
 
+    # Major Incident mode: a commander can declare an incident "major" and link
+    # related incidents under it as children, forming one command structure.
+    is_major = db.Column(db.Boolean, default=False)
+    parent_incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=True)
+
     # Relationships
     assigned_vehicle = db.relationship('Vehicle', foreign_keys=[assigned_vehicle_id])
     reporter = db.relationship('UserModel', foreign_keys=[reported_by], backref='reported_incidents')
     updater = db.relationship('UserModel', foreign_keys=[updated_by], backref='updated_incidents')
+    children = db.relationship('Incident', backref=db.backref('parent', remote_side=[id]),
+                               foreign_keys=[parent_incident_id])
 
     wind_direction = db.Column(db.Integer, nullable=True)  # degrees (0-360)
     wind_speed = db.Column(db.Float, nullable=True)  # km/h

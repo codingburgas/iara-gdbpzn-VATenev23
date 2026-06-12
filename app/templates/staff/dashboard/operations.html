@@ -165,9 +165,13 @@
                 } else {
                     etaBlock = '<div class="eta-line"><span class="eta-unit">No unit assigned</span></div>';
                 }
+                var majorTag = i.is_major
+                    ? '<span class="ops-type" style="background:rgba(209,52,47,0.35);color:#ffb3ae;">MAJOR</span>'
+                    : (i.parent_id ? '<span class="ops-type other" title="Part of Major Incident #' + i.parent_id + '">&#8627; #' + i.parent_id + '</span>' : '');
                 return '<div class="ops-inc">'
                     + '<div class="ops-inc-top">'
                     + '<span class="ops-type ' + type + '">' + type + '</span>'
+                    + majorTag
                     + '<span class="ops-inc-id">#' + i.id + '</span>'
                     + '<span class="ops-inc-title">' + i.title + '</span>'
                     + '<span class="ops-status ' + statusClass(i.status) + '">' + i.status + '</span>'

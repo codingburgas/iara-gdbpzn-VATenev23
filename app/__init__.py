@@ -53,6 +53,10 @@ def _ensure_columns():
             'route_dest_lat': 'FLOAT',
             'route_dest_lng': 'FLOAT',
         },
+        'incident': {
+            'is_major': 'BOOLEAN DEFAULT 0',
+            'parent_incident_id': 'INTEGER',
+        },
     }
 
     inspector = inspect(db.engine)

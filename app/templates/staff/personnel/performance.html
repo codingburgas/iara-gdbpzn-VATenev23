@@ -1,0 +1,85 @@
+{% extends "staff/base.html" %}
+{% block page_title %}Performance{% endblock %}
+{% block topbar_title %}Performance Leaderboard{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Personnel</div>
+        <h1>Performance Leaderboard</h1>
+        <div class="page-sub">Scored from incidents responded, task completion, shift hours (last {{ days }} days) and SOS history</div>
+    </div>
+    <div class="btn-group">
+        <a href="{{ url_for('personnel.performance_leaderboard', days=30) }}" class="btn btn-sm {{ 'btn-primary' if days == 30 else 'btn-outline-secondary' }}">30 days</a>
+        <a href="{{ url_for('personnel.performance_leaderboard', days=90) }}" class="btn btn-sm {{ 'btn-primary' if days == 90 else 'btn-outline-secondary' }}">90 days</a>
+        <a href="{{ url_for('personnel.performance_leaderboard', days=365) }}" class="btn btn-sm {{ 'btn-primary' if days == 365 else 'btn-outline-secondary' }}">1 year</a>
+    </div>
+</div>
+
+{% if rows %}
+<!-- Top 3 podium -->
+<div class="row g-3 mb-3">
+    {% for row in rows[:3] %}
+    <div class="col-md-4">
+        <div class="card stat-card mb-0 {% if loop.index == 1 %}border-2{% endif %}"
+             {% if loop.index == 1 %}style="border-color: var(--accent);"{% endif %}>
+            <div class="card-body">
+                <div class="stat-tile">
+                    <div class="stat-icon {% if loop.index == 1 %}is-accent{% elif loop.index == 2 %}is-info{% else %}is-warning{% endif %}">
+                        <i class="fa-solid fa-{% if loop.index == 1 %}trophy{% elif loop.index == 2 %}medal{% else %}award{% endif %}"></i>
+                    </div>
+                    <div>
+                        <div class="stat-label">#{{ loop.index }} — {{ row.perf.band }}</div>
+                        <div class="stat-value" style="font-size:1.2rem;">{{ row.firefighter.name }}</div>
+                        <div class="stat-meta">{{ row.perf.score }} pts · {{ row.firefighter.rank }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card mb-0">
+    <div class="card-header"><i class="fa-solid fa-ranking-star text-muted me-2"></i>Full Ranking</div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>#</th><th>Firefighter</th><th>Rank</th><th>Score</th><th>Band</th>
+                    <th>Incidents</th><th>Tasks</th><th>On Time</th><th>Late</th><th>Overdue</th><th>Shift Hrs</th><th>SOS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                {% set p = row.perf %}
+                <tr>
+                    <td class="fw-semibold">{{ loop.index }}</td>
+                    <td class="fw-semibold">{{ row.firefighter.name }}</td>
+                    <td class="text-muted">{{ row.firefighter.rank }}</td>
+                    <td><strong>{{ p.score }}</strong></td>
+                    <td><span class="badge bg-{{ p.band_class }}">{{ p.band }}</span></td>
+                    <td>{{ p.incidents }}</td>
+                    <td>{{ p.tasks_done }}</td>
+                    <td class="text-success">{{ p.on_time }}</td>
+                    <td class="{{ 'text-danger' if p.late }}">{{ p.late }}</td>
+                    <td class="{{ 'text-danger' if p.overdue }}">{{ p.overdue }}</td>
+                    <td>{{ p.shift_hours }}</td>
+                    <td class="{{ 'text-danger' if p.sos }}">{{ p.sos }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p class="text-muted small mt-2 mb-0">
+    <i class="fa-solid fa-circle-info"></i>
+    Scoring: +10 per incident responded · +5 per completed task (+2 on-time, −2 late) · −3 per overdue open task · +1 per shift hour (max 40) · −5 per SOS raised.
+</p>
+{% else %}
+<div class="card mb-0"><div class="card-body text-center py-5 text-muted">
+    No firefighters in the system yet. <a href="{{ url_for('personnel.import_data') }}">Import sample data</a> first.
+</div></div>
+{% endif %}
+{% endblock %}

@@ -82,6 +82,12 @@
                    href="{{ url_for('stations.list_stations') }}">
                     <i class="fa-solid fa-building-shield"></i> Fire Stations
                 </a>
+                {% if role == 'commander' %}
+                <a class="sidebar-link {{ 'active' if ep == 'personnel.performance_leaderboard' }}"
+                   href="{{ url_for('personnel.performance_leaderboard') }}">
+                    <i class="fa-solid fa-ranking-star"></i> Performance
+                </a>
+                {% endif %}
                 {% endif %}
 
                 <div class="nav-section-label">Communication</div>

@@ -290,11 +290,22 @@ def detail(incident_id):
     if incident.latitude and incident.longitude:
         weather = get_weather(incident.latitude, incident.longitude)
 
+    # Open incidents that could still be linked under this one if it is major.
+    linkable = []
+    if incident.is_major:
+        linkable = Incident.query.filter(
+            Incident.id != incident.id,
+            Incident.status != 'Closed',
+            Incident.parent_incident_id.is_(None),
+            Incident.is_major.is_(False)
+        ).order_by(Incident.reported_at.desc()).all()
+
     return render_template('staff/incidents/detail.html',
                            incident=incident,
                            form=form,
                            timeline=build_incident_timeline(incident),
                            response_metrics=incident_response_metrics(incident),
+                           linkable=linkable,
                            weather=weather)
 
 
@@ -343,6 +354,87 @@ def quick_status_update(incident_id):
     )
 
     return {'success': True, 'new_status': new_status}
+
+
+# ========== MAJOR INCIDENT MODE ==========
+@incidents_bp.route('/staff/incident/<int:incident_id>/declare-major', methods=['POST'])
+@login_required
+@role_required('commander')
+def declare_major(incident_id):
+    """Promote an incident to a Major Incident so related incidents can be
+    linked under it as one command structure."""
+    incident = Incident.query.get_or_404(incident_id)
+
+    if incident.parent_incident_id:
+        flash('This incident is part of another major incident — unlink it first.', 'warning')
+        return redirect(url_for('incidents.detail', incident_id=incident_id))
+
+    incident.is_major = True
+    db.session.add(StatusUpdate(
+        incident_id=incident.id,
+        user_id=session.get('user_id'),
+        old_status=incident.status,
+        new_status=incident.status,
+        comment='Declared a MAJOR INCIDENT — related incidents now report under this command'
+    ))
+    db.session.commit()
+
+    flash(f'Incident #{incident.id} declared a Major Incident.', 'success')
+    return redirect(url_for('incidents.detail', incident_id=incident_id))
+
+
+@incidents_bp.route('/staff/incident/<int:incident_id>/link-child', methods=['POST'])
+@login_required
+@role_required('commander')
+def link_child(incident_id):
+    """Attach another incident as a child of this major incident."""
+    parent = Incident.query.get_or_404(incident_id)
+    child_id = request.form.get('child_id', type=int)
+    child = Incident.query.get_or_404(child_id) if child_id else None
+
+    if not parent.is_major:
+        flash('Declare this incident as major before linking others.', 'warning')
+    elif not child or child.id == parent.id:
+        flash('Pick a different incident to link.', 'warning')
+    elif child.is_major or child.children:
+        flash('Cannot link another major incident — unlink its children first.', 'warning')
+    else:
+        child.parent_incident_id = parent.id
+        db.session.add(StatusUpdate(
+            incident_id=child.id,
+            user_id=session.get('user_id'),
+            old_status=child.status,
+            new_status=child.status,
+            comment=f'Linked under Major Incident #{parent.id} ({parent.title})'
+        ))
+        db.session.commit()
+        flash(f'Incident #{child.id} is now part of Major Incident #{parent.id}.', 'success')
+
+    return redirect(url_for('incidents.detail', incident_id=incident_id))
+
+
+@incidents_bp.route('/staff/incident/<int:incident_id>/unlink', methods=['POST'])
+@login_required
+@role_required('commander')
+def unlink_child(incident_id):
+    """Detach a child incident from its major incident."""
+    child = Incident.query.get_or_404(incident_id)
+    parent = child.parent
+
+    if parent:
+        child.parent_incident_id = None
+        db.session.add(StatusUpdate(
+            incident_id=child.id,
+            user_id=session.get('user_id'),
+            old_status=child.status,
+            new_status=child.status,
+            comment=f'Unlinked from Major Incident #{parent.id}'
+        ))
+        db.session.commit()
+        flash(f'Incident #{child.id} unlinked from Major Incident #{parent.id}.', 'success')
+        return redirect(url_for('incidents.detail', incident_id=parent.id))
+
+    return redirect(url_for('incidents.detail', incident_id=incident_id))
 
 
 @incidents_bp.route('/staff/incident/<int:incident_id>/pdf')
