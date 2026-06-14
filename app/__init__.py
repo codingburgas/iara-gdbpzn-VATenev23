@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
@@ -23,6 +23,16 @@ def create_app(config_class=Config):
     # Import and register blueprints
     from app.routes import register_blueprints
     register_blueprints(app)
+
+    # Error handlers (themed pages)
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def server_error(error):
+        db.session.rollback()  # don't leave a broken transaction open
+        return render_template('errors/500.html'), 500
 
     # Create tables
     with app.app_context():
