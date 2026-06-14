@@ -142,25 +142,6 @@ You're ready.
 
 ---
 
-## Demo script (for a presentation)
-
-A 5-minute walkthrough that shows the system end-to-end:
-
-1. **Open the public site** (`/`) → click **Live Operations** in the nav. Point
-   out that citizens can see active incidents with *no login* and *no private data*.
-2. **Log in** as commander → open **Report Incident**. Pin a location on the map
-   (the address fills itself in) and note the **suggested closest unit**. Submit.
-3. You're taken to the **incident page** — the assigned unit is already **driving
-   the real road route** toward the scene with a live ETA countdown.
-4. Open the **Operations Board** in another tab. Watch the unit move and the ETA
-   tick down. When it arrives, the incident **auto-flips to "On Scene"** and a
-   history entry ("{unit} arrived on scene") appears.
-5. Back on the public **`/live`** map — the same response is visible to the
-   public, but anonymized. Close the incident → the unit returns to station and
-   its crew goes back to *available*.
-
----
-
 ## Project structure
 
 ```
