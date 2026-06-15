@@ -66,6 +66,11 @@ def _ensure_columns():
         'incident': {
             'is_major': 'BOOLEAN DEFAULT 0',
             'parent_incident_id': 'INTEGER',
+            'hazardous_materials': 'TEXT',
+            'action_plan': 'TEXT',
+        },
+        'message': {
+            'image_path': 'VARCHAR(255)',
         },
     }
 

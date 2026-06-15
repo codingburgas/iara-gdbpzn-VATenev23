@@ -39,6 +39,21 @@ class Incident(db.Model):
     wind_direction = db.Column(db.Integer, nullable=True)  # degrees (0-360)
     wind_speed = db.Column(db.Float, nullable=True)  # km/h
 
+    # Operational briefing shown to responding crews on their devices.
+    hazardous_materials = db.Column(db.Text, nullable=True)  # identified dangerous substances
+    action_plan = db.Column(db.Text, nullable=True)          # plan of action for this event
+
+
+class IncidentAcknowledgment(db.Model):
+    """A firefighter confirming they are taking on / responding to an incident."""
+    id = db.Column(db.Integer, primary_key=True)
+    incident_id = db.Column(db.Integer, db.ForeignKey('incident.id'), nullable=False)
+    firefighter_id = db.Column(db.Integer, db.ForeignKey('firefighter.id'), nullable=False)
+    acknowledged_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    incident = db.relationship('Incident', backref='acknowledgments')
+    firefighter = db.relationship('Firefighter')
+
 
 class StatusUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)

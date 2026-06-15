@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, Response
 from app import db
-from app.models.incident import Incident, StatusUpdate
+from app.models.incident import Incident, StatusUpdate, IncidentAcknowledgment
 from app.models.vehicle import Vehicle
 from app.models.user import UserModel
 from app.models.firefighter import Firefighter
@@ -205,6 +205,8 @@ def report_incident():
             longitude=lon,
             incident_type=form.incident_type.data,
             description=form.description.data,
+            hazardous_materials=form.hazardous_materials.data or None,
+            action_plan=form.action_plan.data or None,
             reported_by=session.get('user_id'),
             status='Reported',
             assigned_vehicle_id=form.vehicle_id.data
@@ -354,6 +356,32 @@ def quick_status_update(incident_id):
     )
 
     return {'success': True, 'new_status': new_status}
+
+
+# ========== DISPATCH ACKNOWLEDGMENT ==========
+@incidents_bp.route('/staff/incident/<int:incident_id>/acknowledge', methods=['POST'])
+@login_required
+@role_required('firefighter', 'commander')
+def acknowledge_incident(incident_id):
+    """A responding firefighter confirms they are taking on the incident."""
+    incident = Incident.query.get_or_404(incident_id)
+    ff = Firefighter.query.filter_by(user_id=session.get('user_id')).first()
+    if not ff:
+        return jsonify({'success': False, 'error': 'No firefighter profile found'}), 404
+
+    existing = IncidentAcknowledgment.query.filter_by(
+        incident_id=incident_id, firefighter_id=ff.id).first()
+    if not existing:
+        db.session.add(IncidentAcknowledgment(incident_id=incident_id, firefighter_id=ff.id))
+        if incident.reported_by:
+            create_notification(
+                user_id=incident.reported_by,
+                title=f'Incident #{incident.id} acknowledged',
+                message=f'{ff.name} is responding to "{incident.title}"',
+                incident_id=incident.id)
+        db.session.commit()
+
+    return jsonify({'success': True})
 
 
 # ========== MAJOR INCIDENT MODE ==========

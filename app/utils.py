@@ -1,10 +1,13 @@
 from functools import wraps
 from flask import flash, redirect, url_for, session, send_file, current_app
+from werkzeug.utils import secure_filename
 import requests
 import datetime
 import io
 import json
 import math
+import os
+import uuid
 from app import db
 from app.models.notification import Notification
 from app.models.equipment import Equipment, EquipmentAssignment
@@ -80,6 +83,38 @@ def geocode_address(address):
     except:
         pass
     return None, None
+
+
+# ========== FILE UPLOADS ==========
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+MAX_IMAGE_BYTES = 6 * 1024 * 1024  # 6 MB
+
+
+def save_uploaded_image(file_storage, subdir='uploads'):
+    """Validate and save an uploaded image to static/<subdir>/.
+    Returns the path relative to the static folder (e.g. 'uploads/ab12.jpg'),
+    or None if there is no valid file. Raises ValueError on a bad file."""
+    if not file_storage or not file_storage.filename:
+        return None
+
+    ext = file_storage.filename.rsplit('.', 1)[-1].lower() if '.' in file_storage.filename else ''
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError('Unsupported image type. Use jpg, png, gif or webp.')
+
+    # Size check without trusting the client.
+    file_storage.stream.seek(0, os.SEEK_END)
+    size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+    if size > MAX_IMAGE_BYTES:
+        raise ValueError('Image is too large (max 6 MB).')
+
+    folder = os.path.join(current_app.static_folder, subdir)
+    os.makedirs(folder, exist_ok=True)
+
+    safe_stem = secure_filename(file_storage.filename.rsplit('.', 1)[0]) or 'photo'
+    filename = f"{safe_stem[:40]}_{uuid.uuid4().hex[:8]}.{ext}"
+    file_storage.save(os.path.join(folder, filename))
+    return f"{subdir}/{filename}"
 
 
 # ========== LIVE ROUTING (OSRM / OpenStreetMap, no API key) ==========
@@ -159,7 +194,7 @@ def start_vehicle_route(vehicle, dest_lat, dest_lng):
 def _set_crew_status(vehicle, new_status):
     """Bulk-update every firefighter assigned to a vehicle. Leaves firefighters
     who are unavailable for non-operational reasons (sick, vacation) untouched."""
-    LOCKED = {'sick', 'vacation', 'training'}
+    LOCKED = {'sick', 'vacation', 'training', 'business_trip'}
     for f in vehicle.firefighters:
         if f.status not in LOCKED:
             f.status = new_status

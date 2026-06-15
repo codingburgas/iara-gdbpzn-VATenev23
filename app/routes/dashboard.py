@@ -141,6 +141,7 @@ def firefighter_dashboard():
 
     my_incidents = []
     my_tasks = []
+    acknowledged_ids = set()
 
     if firefighter:
         # Get incidents assigned to this firefighter's vehicle
@@ -152,14 +153,16 @@ def firefighter_dashboard():
             status='pending'
         ).order_by(Task.priority.desc(), Task.deadline).all()
 
-        print(f"Firefighter found: {firefighter.name}, vehicle: {firefighter.vehicle_id}")
-    else:
-        print(f"No firefighter found for user: {session.get('user_name')} (ID: {session.get('user_id')})")
+        # Which of these incidents has this firefighter already acknowledged?
+        from app.models.incident import IncidentAcknowledgment
+        acknowledged_ids = {a.incident_id for a in
+                            IncidentAcknowledgment.query.filter_by(firefighter_id=firefighter.id).all()}
 
     return render_template('staff/dashboard/firefighter.html',
                            incidents=my_incidents,
                            firefighter=firefighter,
-                           tasks=my_tasks)
+                           tasks=my_tasks,
+                           acknowledged_ids=acknowledged_ids)
 
 @dashboard_bp.route('/commander/dashboard')
 @login_required

@@ -104,7 +104,7 @@
                 {% if incidents %}
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
-                        <thead><tr><th>ID</th><th>Type</th><th>Title</th><th>Status</th><th>Time</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Type</th><th>Title</th><th>Status</th><th>Respond</th><th>Actions</th></tr></thead>
                         <tbody>
                             {% for incident in incidents %}
                             <tr>
@@ -115,11 +115,16 @@
                                     {% set s = incident.status %}
                                     <span class="pill {% if s=='Reported' %}pill-reported{% elif s=='Dispatched' %}pill-dispatched{% elif s=='On Scene' %}pill-onscene{% else %}pill-closed{% endif %}">{{ s }}</span>
                                 </td>
-                                <td class="text-muted">{{ incident.reported_at.strftime('%H:%M') }}</td>
+                                <td>
+                                    {% if incident.id in acknowledged_ids %}
+                                    <span class="badge bg-success" id="ack-{{ incident.id }}"><i class="fa-solid fa-check"></i> Responding</span>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-primary" id="ack-{{ incident.id }}" onclick="acknowledge({{ incident.id }})"><i class="fa-solid fa-hand"></i> Acknowledge</button>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary" title="Details"><i class="fa-solid fa-eye"></i></a>
-                                        <button class="btn btn-outline-secondary" title="En route" onclick="updateIncidentStatus({{ incident.id }}, 'Dispatched')"><i class="fa-solid fa-truck-fast"></i></button>
                                         <button class="btn btn-outline-secondary" title="On scene" onclick="updateIncidentStatus({{ incident.id }}, 'On Scene')"><i class="fa-solid fa-fire"></i></button>
                                         <button class="btn btn-outline-secondary" title="Close" onclick="updateIncidentStatus({{ incident.id }}, 'Closed')"><i class="fa-solid fa-check"></i></button>
                                     </div>
@@ -183,6 +188,23 @@ function updateStatus(status) {
     .then(data => {
         if (data.success) { location.reload(); }
         else { alert('Error: ' + (data.error || 'Could not update status')); }
+    })
+    .catch(() => alert('Network error, please try again.'));
+}
+
+function acknowledge(incidentId) {
+    fetch(`/staff/incident/${incidentId}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            var el = document.getElementById('ack-' + incidentId);
+            el.outerHTML = '<span class="badge bg-success"><i class="fa-solid fa-check"></i> Responding</span>';
+        } else {
+            alert('Error: ' + (data.error || 'Could not acknowledge'));
+        }
     })
     .catch(() => alert('Network error, please try again.'));
 }

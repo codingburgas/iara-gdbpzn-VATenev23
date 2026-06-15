@@ -44,6 +44,15 @@
                         <small class="text-muted d-block" id="unitHint">This unit will be dispatched and routed live</small>
                     </div>
                     <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows=3) }}</div>
+                    <div class="mb-3">
+                        {{ form.hazardous_materials.label(class="form-label") }}
+                        {{ form.hazardous_materials(class="form-control", rows=2, placeholder="e.g. propane cylinders on site, chlorine leak…") }}
+                        <small class="text-muted">Identified dangerous substances — shown to responding crews.</small>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.action_plan.label(class="form-label") }}
+                        {{ form.action_plan(class="form-control", rows=2, placeholder="Tactical plan of action for this event…") }}
+                    </div>
                     {{ form.submit(class="btn btn-primary") }}
                 </div>
             </div>

@@ -1,9 +1,16 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, SubmitField, SelectField, TextAreaField, BooleanField
 from wtforms.validators import DataRequired, Optional
 
 class MessageForm(FlaskForm):
-    message = TextAreaField('Message', validators=[DataRequired()])
+    # Message text is optional so a photo can be sent on its own; the route
+    # enforces that at least one of (text, photo) is provided.
+    message = TextAreaField('Message', validators=[Optional()])
+    photo = FileField('Photo', validators=[
+        Optional(),
+        FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Images only (jpg, png, gif, webp).')
+    ])
     is_emergency = BooleanField('Emergency Broadcast', default=False)
     submit = SubmitField('Send')
 

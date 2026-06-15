@@ -9,6 +9,7 @@ class Message(db.Model):
     message = db.Column(db.Text, nullable=False)
     message_type = db.Column(db.String(20), default='chat')
     is_emergency = db.Column(db.Boolean, default=False)
+    image_path = db.Column(db.String(255), nullable=True)  # shared photo (static/uploads/...)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
     incident = db.relationship('Incident', backref='messages')

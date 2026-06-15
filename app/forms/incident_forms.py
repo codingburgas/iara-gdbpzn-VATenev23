@@ -15,6 +15,8 @@ class IncidentForm(FlaskForm):
                                          ('other', 'Other')],
                                 validators=[DataRequired()])
     description = TextAreaField('Description', validators=[DataRequired()])
+    hazardous_materials = TextAreaField('Hazardous Materials', validators=[Optional()])
+    action_plan = TextAreaField('Action Plan', validators=[Optional()])
     vehicle_id = SelectField('Assign Vehicle', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Report Incident')
 

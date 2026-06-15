@@ -1,48 +1,128 @@
 {% extends "staff/base.html" %}
+{% block page_title %}Incident Chat{% endblock %}
+{% block topbar_title %}Incident #{{ incident.id }} — Communication{% endblock %}
 
 {% block content %}
-<div class="row"><div class="col-12"><h2>Incident #{{ incident.id }}: {{ incident.title }}</h2><p class="text-muted">Location: {{ incident.location }} | Status: {{ incident.status }}</p><hr></div></div>
-
-<div class="row">
-    <div class="col-md-8">
-        <div class="card"><div class="card-header bg-dark text-white"><h5 class="mb-0">Incident Communication</h5><small>Real-time updates from all units</small></div>
-        <div class="card-body" id="chatMessages" style="height: 400px; overflow-y: auto;">
-            {% for msg in messages %}<div class="mb-2 {% if msg.is_emergency %}bg-danger text-white p-2 rounded{% endif %}"><div class="d-flex justify-content-between"><strong class="{% if msg.is_emergency %}text-white{% endif %}">{% if msg.message_type == 'radio' %}{% elif msg.is_emergency %}EMERGENCY:{% else %}{% endif %}{{ msg.user.username }}</strong><small class="{% if msg.is_emergency %}text-white-50{% else %}text-muted{% endif %}">{{ msg.created_at.strftime('%H:%M:%S') }}</small></div><p class="mb-0">{{ msg.message }}</p></div><hr class="my-1">{% else %}<p class="text-muted">No messages yet. Start the conversation!</p>{% endfor %}
-        </div>
-        <div class="card-footer">
-            <div class="mb-2"><small class="text-muted">Quick Replies:</small>{% for template in templates %}<button class="btn btn-sm btn-outline-secondary mt-1" onclick="sendQuickMessage({{ template.id }})">{{ template.name }}</button>{% endfor %}</div>
-            <form method="POST"><div class="input-group">{{ form.message(class="form-control", rows=2, placeholder="Type your message...") }}<div class="input-group-append d-flex flex-column"><button type="submit" class="btn btn-primary" style="height:50px;">Send</button><label class="mt-1">{{ form.is_emergency() }} Emergency Broadcast</label></div></div></form>
-        </div></div>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Incident #{{ incident.id }}</div>
+        <h1>{{ incident.title }}</h1>
+        <div class="page-sub">{{ incident.location }} · {{ incident.status }}</div>
     </div>
-    <div class="col-md-4">
-        <div class="card mb-3"><div class="card-header bg-dark text-white"><h5 class="mb-0">Active Units</h5></div><div class="card-body">{% if incident.assigned_vehicle %}<h6>Assigned Vehicle: {{ incident.assigned_vehicle.type }}</h6><ul class="list-unstyled">{% for f in incident.assigned_vehicle.firefighters %}<li>{{ f.name }} ({{ f.rank }})</li>{% endfor %}</ul>{% else %}<p class="text-muted">No units assigned yet</p>{% endif %}<hr><a href="{{ url_for('incidents.list_incidents') }}" class="btn btn-sm btn-secondary w-100">Back to Incidents</a></div></div>
-        <div class="card"><div class="card-header bg-dark text-white"><h5 class="mb-0">Radio Channel</h5></div><div class="card-body"><p class="small">For radio communications, use the <a href="{{ url_for('communications.radio_log', incident_id=incident.id) }}">Radio Log</a> page.</p><p class="small text-muted mb-0">Channel: FireOps {{ incident.id }}</p></div></div>
+    <a href="{{ url_for('incidents.detail', incident_id=incident.id) }}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Back to Incident
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-0">
+            <div class="card-header"><i class="fa-solid fa-comments text-muted me-2"></i>Incident Communication</div>
+            <div class="card-body" id="chatMessages" style="height: 420px; overflow-y: auto;">
+                {% for msg in messages %}
+                <div class="mb-3 {% if msg.is_emergency %}p-2 rounded{% endif %}" {% if msg.is_emergency %}style="background:var(--danger-soft);border-left:3px solid var(--danger);"{% endif %}>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>
+                            {% if msg.message_type == 'radio' %}<i class="fa-solid fa-walkie-talkie text-muted"></i>
+                            {% elif msg.is_emergency %}<i class="fa-solid fa-triangle-exclamation text-danger"></i> EMERGENCY ·
+                            {% endif %}
+                            {{ msg.user.username if msg.user else 'System' }}
+                        </strong>
+                        <small class="text-muted">{{ msg.created_at.strftime('%H:%M:%S') }}</small>
+                    </div>
+                    {% if msg.message and msg.message != '(photo)' %}<p class="mb-1">{{ msg.message }}</p>{% endif %}
+                    {% if msg.image_path %}
+                    <a href="{{ url_for('static', filename=msg.image_path) }}" target="_blank">
+                        <img src="{{ url_for('static', filename=msg.image_path) }}" alt="Shared photo"
+                             style="max-width: 240px; max-height: 200px; border-radius: var(--r-sm); border: 1px solid var(--border); margin-top: 0.25rem;">
+                    </a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted">No messages yet. Start the conversation.</p>
+                {% endfor %}
+            </div>
+            <div class="card-footer" style="background:var(--surface-2); border-top:1px solid var(--border);">
+                <div class="mb-2">
+                    <small class="text-muted">Quick replies:</small>
+                    {% for template in templates %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="sendQuickMessage({{ template.id }})">{{ template.name }}</button>
+                    {% endfor %}
+                </div>
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="d-flex gap-2 align-items-start">
+                        {{ form.message(class="form-control", rows=2, placeholder="Type a message…") }}
+                        <button type="submit" class="btn btn-primary" style="white-space:nowrap;"><i class="fa-solid fa-paper-plane"></i> Send</button>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <label class="btn btn-sm btn-outline-secondary mb-0">
+                            <i class="fa-solid fa-camera"></i> Attach photo
+                            {{ form.photo(class="d-none", id="photoInput", onchange="showPhotoName(this)") }}
+                        </label>
+                        <span id="photoName" class="small text-muted"></span>
+                        <label class="small mb-0">{{ form.is_emergency() }} Emergency broadcast</label>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="fa-solid fa-users text-muted me-2"></i>Active Units</div>
+            <div class="card-body">
+                {% if incident.assigned_vehicle %}
+                <h6>{{ incident.assigned_vehicle.type }}</h6>
+                <ul class="list-unstyled mb-0">
+                    {% for f in incident.assigned_vehicle.firefighters %}
+                    <li><i class="fa-solid fa-helmet-safety text-muted me-1"></i>{{ f.name }} ({{ f.rank }})</li>
+                    {% endfor %}
+                </ul>
+                {% else %}<p class="text-muted mb-0">No units assigned yet.</p>{% endif %}
+            </div>
+        </div>
+        <div class="card mb-0">
+            <div class="card-header"><i class="fa-solid fa-walkie-talkie text-muted me-2"></i>Radio Channel</div>
+            <div class="card-body">
+                <p class="small mb-1">For radio comms, use the <a href="{{ url_for('communications.radio_log', incident_id=incident.id) }}">Radio Log</a>.</p>
+                <p class="small text-muted mb-0">Channel: FireOps {{ incident.id }}</p>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
 var chatContainer = document.getElementById('chatMessages');
 if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
-function sendQuickMessage(templateId) { 
-    LoadingState.start();
-    fetch(`/staff/incident/{{ incident.id }}/chat/quick`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({template_id: templateId}) 
-    })
-    .then(r=>r.json())
-    .then(data=>{
-        if(data.success) location.reload();
-        else {
-            LoadingState.finish();
-            alert('Error sending quick message');
-        }
-    })
-    .catch(err => {
-        LoadingState.finish();
-        console.error(err);
-    }); 
+
+function showPhotoName(input) {
+    document.getElementById('photoName').textContent = input.files.length ? input.files[0].name : '';
 }
-setInterval(function() { fetch(window.location.href).then(r=>r.text()).then(html=>{var parser=new DOMParser(),doc=parser.parseFromString(html,'text/html'),newMessages=doc.getElementById('chatMessages');if(newMessages&&chatContainer.innerHTML!==newMessages.innerHTML){chatContainer.innerHTML=newMessages.innerHTML;chatContainer.scrollTop=chatContainer.scrollHeight;}}); }, 10000);
+
+function sendQuickMessage(templateId) {
+    fetch(`/staff/incident/{{ incident.id }}/chat/quick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template_id: templateId })
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) location.reload(); else alert('Error sending quick message'); })
+    .catch(err => console.error(err));
+}
+
+// Light auto-refresh of the message panel (skips while a photo is staged).
+setInterval(function () {
+    var pi = document.getElementById('photoInput');
+    if (pi && pi.files.length) return;
+    fetch(window.location.href).then(r => r.text()).then(html => {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var fresh = doc.getElementById('chatMessages');
+        if (fresh && chatContainer.innerHTML !== fresh.innerHTML) {
+            chatContainer.innerHTML = fresh.innerHTML;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    });
+}, 10000);
 </script>
 {% endblock %}

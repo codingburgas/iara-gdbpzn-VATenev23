@@ -6,7 +6,7 @@ from app.models.communication import Message, MessageTemplate
 from app.models.firefighter import Firefighter
 from app.models.notification import Notification
 from app.forms.communication_forms import MessageForm, RadioLogForm, TemplateForm
-from app.utils import login_required, role_required, create_notification
+from app.utils import login_required, role_required, create_notification, save_uploaded_image
 import datetime
 
 communications_bp = Blueprint('communications', __name__)
@@ -52,19 +52,34 @@ def incident_chat(incident_id):
     templates = MessageTemplate.query.order_by(MessageTemplate.order).all()
 
     if form.validate_on_submit():
+        text = (form.message.data or '').strip()
+
+        # Handle an optional shared photo.
+        image_path = None
+        try:
+            image_path = save_uploaded_image(form.photo.data)
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('communications.incident_chat', incident_id=incident.id))
+
+        if not text and not image_path:
+            flash('Type a message or attach a photo.', 'warning')
+            return redirect(url_for('communications.incident_chat', incident_id=incident.id))
+
         message = Message(
             incident_id=incident.id,
             user_id=session.get('user_id'),
-            message=form.message.data,
+            message=text or '(photo)',
             message_type='broadcast' if form.is_emergency.data else 'chat',
-            is_emergency=form.is_emergency.data
+            is_emergency=form.is_emergency.data,
+            image_path=image_path
         )
         db.session.add(message)
         db.session.commit()
 
         if form.is_emergency.data:
-            notify_users_about_incident(incident.id, form.message.data)
-            flash('EMERGENCY BROADCAST SENT! ', 'danger')
+            notify_users_about_incident(incident.id, text or 'Photo shared')
+            flash('EMERGENCY BROADCAST SENT!', 'danger')
         else:
             flash('Message sent', 'success')
 

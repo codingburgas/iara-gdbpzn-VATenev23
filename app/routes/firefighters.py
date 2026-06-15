@@ -138,7 +138,7 @@ def list_firefighters():
         )
 
     all_vehicles = v_query.all()
-    all_statuses = ['available', 'on_duty', 'off_duty', 'training', 'sick', 'vacation']
+    all_statuses = ['available', 'on_duty', 'off_duty', 'training', 'sick', 'vacation', 'business_trip']
 
     return render_template('staff/personnel/firefighters.html',
                            firefighters=all_firefighters,
